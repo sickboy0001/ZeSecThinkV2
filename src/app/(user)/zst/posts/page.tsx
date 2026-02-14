@@ -1,4 +1,5 @@
-import Dashboard from "@/components/pages/Dashboard";
+"use server";
+import Posts from "@/components/pages/Posts";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -10,5 +11,5 @@ export default async function Page() {
 
   if (!user) redirect("/login");
 
-  return <Dashboard userId={user.id} />;
+  return <Posts userId={user.id} />;
 }

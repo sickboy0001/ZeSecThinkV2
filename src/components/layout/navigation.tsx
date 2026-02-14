@@ -3,16 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  ClipboardList,
-  Settings,
-  PieChart,
-  Home,
-  Menu,
-  LogOut,
-  LogIn,
-} from "lucide-react";
+import { Home, Menu, LogOut, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,13 +16,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { logout } from "@/app/(auth)/actions";
-
-const navItems = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Logs", href: "/hadbit/logs", icon: ClipboardList },
-  { name: "Items", href: "/hadbit/items", icon: Settings },
-  { name: "Analytics", href: "/hadbit/analytics", icon: PieChart },
-];
+import { navItems } from "@/constants/navigation_constants";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -73,7 +58,7 @@ export function Sidebar() {
           </div>
           <div>
             <div className="text-xl font-bold tracking-tight leading-none">
-              Hadbit
+              ZeroSecThink
             </div>
           </div>
         </div>
@@ -196,7 +181,7 @@ export function MobileNav() {
               </div>
               <div>
                 <SheetTitle className="text-xl font-bold tracking-tight">
-                  Hadbit
+                  ZeroSecThink
                 </SheetTitle>
                 {isLoggedIn && (
                   <div className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">

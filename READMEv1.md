@@ -6,8 +6,8 @@
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/sickboy0001/hadbit-app.git
-cd hadbit-app
+git clone https://github.com/sickboy0001/xxxxx.git
+cd xxxx-app
 
 # 依存関係をインストール
 npm install
@@ -31,8 +31,8 @@ npm run dev
 
 ## 4.デモ or スクリーンショット
 
-Vercel:[Vercel](https://hadbit-app.vercel.app/)
-Github:[GitHub](https://github.com/sickboy0001/hadbit-app)
+Vercel:[Vercel](https://xxxxxx.vercel.app/)
+Github:[GitHub](https://github.com/sickboy0001/xxxxxx-app)
 
 ## 5.環境
 ### ■開発環境
@@ -56,7 +56,7 @@ Github:[GitHub](https://github.com/sickboy0001/hadbit-app)
 ## 6.設計
 ### ■システム配置
 ```
-sickboy0001/hadbit-app https://github.com/sickboy0001/hadbit-app
+sickboy0001/ZeSecThinkV2 https://github.com/sickboy0001/ZeSecThinkV2
 ├ doc                →ドキュメント
 ├ public
 ├ src                →ソース
