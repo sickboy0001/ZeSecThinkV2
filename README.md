@@ -221,6 +221,10 @@ CREATE INDEX idx_zstu_posts_tags ON zstu_posts USING GIN (tags);
 - [ ] 形態素解析した結果からワードクラウドの展開
 - [ ] AI利用してのタイポミスの保管：確認→登録
 - [ ] AI利用してタグの付与機能：確認→登録
+ - 429 RESOURCE_EXHAUSTED 使用量オーバーが出る。少し待つしかない。それか有料化か・・・
+ - https://aistudio.google.com/app/usage?timeRange=last-hour&project=gen-lang-client-0462450144&tab=rate-limit
+ - RPD (Requests Per Day): 1日 15件程度（グラフの推移から推測）
+現状: 本日のリクエスト可能枠が 「0」 になっています。
 - [ ] タグについては専用用語として、説明含めて登録できるようにする
 - [x] コンバート機能
 

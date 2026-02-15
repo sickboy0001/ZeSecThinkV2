@@ -62,11 +62,6 @@ export function Sidebar() {
             </div>
           </div>
         </div>
-        {isLoggedIn && (
-          <div className="text-[15px] text-muted-foreground mt-1 truncate max-w-[180px]">
-            {user?.email}
-          </div>
-        )}
 
         <nav className="space-y-1">
           {navItems.map((item) => {
@@ -98,6 +93,14 @@ export function Sidebar() {
       </div>
 
       <div className="pt-4 border-t border-border/50">
+        {isLoggedIn && (
+          <>
+            <div className="text-sm text-muted-foreground px-2 mb-2 truncate">
+              {user?.email}
+            </div>
+            <div className="my-2 border-t border-border/50" />
+          </>
+        )}
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
@@ -131,6 +134,7 @@ export function MobileNav() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -159,7 +163,7 @@ export function MobileNav() {
 
   return (
     <div className="md:hidden fixed bottom-6 left-6 z-50">
-      <Sheet>
+      <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button
             size="icon"
@@ -198,6 +202,7 @@ export function MobileNav() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setOpen(false)}
                   className={cn(
                     "flex items-center gap-4 px-4 py-3 rounded-xl transition-all",
                     isActive
@@ -217,6 +222,7 @@ export function MobileNav() {
               variant="ghost"
               className="w-full justify-start gap-4 h-12 text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={async () => {
+                setOpen(false);
                 if (isLoggedIn) {
                   await logout();
                 } else {

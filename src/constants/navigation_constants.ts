@@ -10,5 +10,6 @@ export const navItems = [
   { name: "Posts", href: "/zst/posts", icon: ClipboardList },
   { name: "Logs", href: "/zst/logs", icon: Settings },
   { name: "Analytics", href: "/zst/analytics", icon: PieChart },
-  { name: "Convert", href: "/convert", icon: PieChart },
+  // { name: "Convert", href: "/convert", icon: PieChart },
+  { name: "GeminiTypo", href: "/zst/gemini-typo", icon: PieChart },
 ];
