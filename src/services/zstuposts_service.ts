@@ -118,13 +118,12 @@ export const createZstuPost = async (
 ) => {
   const supabase = await createClient();
 
-  // 時刻情報は不要なので、日付部分のみを使用して 00:00:00 とする
   let currentAtVal = undefined;
   if (params.current_at) {
-    const year = params.current_at.getFullYear();
-    const month = String(params.current_at.getMonth() + 1).padStart(2, "0");
-    const day = String(params.current_at.getDate()).padStart(2, "0");
-    currentAtVal = `${year}-${month}-${day}T00:00:00`;
+    // タイムゾーン問題を避け、かつ時刻を0時0分に固定するため、
+    // DateオブジェクトをUTC基準のISO文字列に変換し、日付部分のみを抽出してT00:00:00Zを付与する。
+    const datePart = params.current_at.toISOString().split("T")[0]; // YYYY-MM-DD
+    currentAtVal = `${datePart}T00:00:00.000Z`;
   }
 
   const { error } = await supabase.from("zstu_posts").insert({
