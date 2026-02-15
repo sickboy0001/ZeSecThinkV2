@@ -229,6 +229,8 @@ CREATE INDEX idx_zstu_posts_tags ON zstu_posts USING GIN (tags);
 - [x] コンバート機能
 
 ## 履歴
+- 2026年2月16日
+  - 日付回りやはり引っかかる→解消済み
 - 2026年2月15日
   - [デプロイ・Vercel](https://zerosecthinkv2.vercel.app/dashboard)
   - １日ぐらいでここまでひとまず完了、デプロイまで実施
