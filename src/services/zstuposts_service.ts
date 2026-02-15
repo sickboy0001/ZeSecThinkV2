@@ -80,8 +80,8 @@ export async function getZstuPostsWithDate(
       AND delete_flg = false
       AND current_at::date >= '${startDate}'
       AND current_at::date <= '${endDate}'
-    ORDER BY current_at DESC
-  `;
+    ORDER BY current_at DESC,created_at desc
+    `;
 
   const result = await executeQuery(query);
 

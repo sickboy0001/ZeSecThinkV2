@@ -4,15 +4,12 @@ import React, { useState, useEffect } from "react";
 import {
   Lock,
   Pencil,
-  Hash,
   Copy,
   Trash2,
   Plus,
   ChevronLeft,
   ChevronRight,
   SquarePen,
-  Calendar,
-  LayoutGrid,
   Loader2,
   Check,
 } from "lucide-react";
@@ -31,14 +28,6 @@ import {
 import { toast } from "sonner";
 import { PostsRegistDialog } from "@/components/molecules/PostsRegistDialog";
 import { AutoResizeTextarea } from "@/components/atoms/AutoResizeTextarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 interface Props {
   userId: string;
@@ -123,7 +112,10 @@ export default function PostsDayView({ userId }: Props) {
       const year = parseInt(dateParam.substring(0, 4), 10);
       const month = parseInt(dateParam.substring(4, 6), 10) - 1;
       const day = parseInt(dateParam.substring(6, 8), 10);
-      const date = new Date(year, month, day);
+      // タイムゾーン問題を回避するため、Date.UTCを使用してUTCの午前0時として日付オブジェクトを生成する
+      // これにより、サーバーサイド（UTC）とクライアントサイド（JST）で日付の解釈がずれるのを防ぐ
+      // new Date(year, month, day) は実行環境のタイムゾーンに依存するため、Vercel上では意図しない日付になる
+      const date = new Date(Date.UTC(year, month, day));
       if (!isNaN(date.getTime())) {
         return date;
       }
@@ -137,7 +129,6 @@ export default function PostsDayView({ userId }: Props) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<ZstuPost | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isWeekView, setIsWeekView] = useState(false);
 
   // URLパラメータが変わったらcurrentDateを更新
   useEffect(() => {
@@ -161,31 +152,8 @@ export default function PostsDayView({ userId }: Props) {
         const month = String(currentDate.getMonth() + 1).padStart(2, "0");
         const day = String(currentDate.getDate()).padStart(2, "0");
         const dateStr = `${year}-${month}-${day}`;
-        let dateStrStart = "";
-        let dateStrEnd = "";
 
         const data = await getZstuPostsWithDate(userId, dateStr, dateStr);
-        if (isWeekView) {
-          const dayOfWeek = currentDate.getDay();
-          const start = new Date(currentDate);
-          start.setDate(currentDate.getDate() - dayOfWeek);
-          const end = new Date(start);
-          end.setDate(start.getDate() + 6); // Sunday to Saturday
-
-          const format = (d: Date) => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, "0");
-            const dd = String(d.getDate()).padStart(2, "0");
-            return `${y}-${m}-${dd}`;
-          };
-          dateStrStart = format(start);
-          dateStrEnd = format(end);
-        } else {
-          const format = (d: Date) =>
-            `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-          dateStrStart = format(currentDate);
-          dateStrEnd = dateStrStart;
-        }
 
         setPosts(data || []);
       } catch (error) {
@@ -196,7 +164,7 @@ export default function PostsDayView({ userId }: Props) {
       }
     };
     fetchPosts();
-  }, [userId, currentDate, refreshKey, isWeekView]);
+  }, [userId, currentDate, refreshKey]);
 
   // 日付を変更してURLを更新する関数
   const navigateToDate = (date: Date) => {
@@ -212,10 +180,8 @@ export default function PostsDayView({ userId }: Props) {
   };
 
   const handleDateChange = (days: number) => {
-    const diff = isWeekView ? days * 7 : days;
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + days);
-    newDate.setDate(newDate.getDate() + diff);
     navigateToDate(newDate);
   };
 
@@ -297,6 +263,16 @@ export default function PostsDayView({ userId }: Props) {
     }
   };
 
+  const handleCopy = async (post: ZstuPost) => {
+    try {
+      await navigator.clipboard.writeText(`${post.title}\n\n${post.content}`);
+      toast.success("クリップボードにコピーしました");
+    } catch (error) {
+      console.error(error);
+      toast.error("コピーに失敗しました");
+    }
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto p-4 flex flex-col gap-4">
       {/* --- 画像通りの日付ヘッダー --- */}
@@ -313,7 +289,7 @@ export default function PostsDayView({ userId }: Props) {
           >
             {formatDate(currentDate)}
           </h2>
-          <span className="text-muted-foreground font-semibold text-sm">
+          <span className="text-muted-foreground font-semibold text-base">
             [{posts.length}]
           </span>
         </div>
@@ -356,30 +332,12 @@ export default function PostsDayView({ userId }: Props) {
           >
             <SquarePen className="h-4 w-4" /> add
           </Button>
-          <Button
-            variant={isWeekView ? "default" : "outline"}
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setIsWeekView(true)}
-          >
-            <Calendar className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={!isWeekView ? "default" : "outline"}
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setIsWeekView(false)}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
       {/* --- 投稿リスト本体 --- */}
       <Card className="rounded-xl border shadow-sm bg-card overflow-hidden">
-        <CardContent
-          className={`p-4 md:p-6 flex flex-col gap-6 ${isWeekView ? "p-0 md:p-0 gap-0" : ""}`}
-        >
+        <CardContent className="p-4 md:p-6 flex flex-col gap-6">
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -388,61 +346,13 @@ export default function PostsDayView({ userId }: Props) {
             <div className="text-center py-12 text-muted-foreground">
               この日の投稿はありません 投稿はありません
             </div>
-          ) : isWeekView ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Content</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Public</TableHead>
-                  <TableHead>Delete</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {posts.map((post) => (
-                  <TableRow key={post.id}>
-                    <TableCell className="whitespace-nowrap">
-                      {post.current_at
-                        ? new Date(post.current_at).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="font-medium">{post.title}</TableCell>
-                    <TableCell
-                      className="max-w-[200px] truncate"
-                      title={post.content}
-                    >
-                      {post.content}
-                    </TableCell>
-                    <TableCell>{post.tags?.join(", ")}</TableCell>
-                    <TableCell>{post.second}s</TableCell>
-                    <TableCell>
-                      {post.public_flg ? (
-                        <Check className="h-4 w-4 text-green-500" />
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {post.delete_flg ? (
-                        <Check className="h-4 w-4 text-red-500" />
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           ) : (
             <>
               {posts.map((post, index) => (
-                <div key={post.id} className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
+                <div key={post.id} className="flex flex-col gap-1">
+                  <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
                     {/* タイトル */}
-                    <div className="flex items-center gap-1 flex-1 mr-2">
+                    <div className="flex items-center gap-1 min-w-[200px]">
                       <Lock className="h-4 w-4 text-red-800 shrink-0" />
                       <EditableField
                         value={post.title}
@@ -462,7 +372,7 @@ export default function PostsDayView({ userId }: Props) {
                       />
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 ml-auto">
                       {/* 編集ボタン */}
                       <Button
                         variant="outline"
@@ -475,19 +385,12 @@ export default function PostsDayView({ userId }: Props) {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      {/* タグ付けボタン */}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 border-slate-200"
-                      >
-                        <Hash className="h-4 w-4" />
-                      </Button>
                       {/* コピー */}
                       <Button
                         variant="outline"
                         size="icon"
                         className="h-10 w-10 border-slate-200"
+                        onClick={() => handleCopy(post)}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
@@ -501,8 +404,8 @@ export default function PostsDayView({ userId }: Props) {
                     value={post.content}
                     onChange={(val) => handleContentChange(post.id, val)}
                     onSave={(val) => handleContentSave(post.id, val)}
-                    viewClassName="text-[17px] leading-relaxed whitespace-pre-wrap font-normal hover:bg-slate-50/50 rounded p-1 -ml-1 transition-colors"
-                    inputClassName="text-[17px] leading-relaxed font-normal min-h-[120px] resize-none border-none shadow-none focus-visible:ring-0 px-0 py-0 bg-transparent"
+                    viewClassName="text-lg leading-relaxed whitespace-pre-wrap font-normal hover:bg-slate-50/50 rounded p-1 -ml-1 transition-colors"
+                    inputClassName="text-lg leading-relaxed font-normal min-h-[120px] resize-none border-none shadow-none focus-visible:ring-0 px-0 py-0 bg-transparent"
                     placeholder="内容なし"
                   />
 
@@ -542,11 +445,13 @@ export default function PostsDayView({ userId }: Props) {
                       {/* 物理削除ボタン */}
                       <Button
                         variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1 ml-auto border-slate-200"
+                        className="h-8 w-8 sm:w-auto text-xs ml-auto border-slate-200 sm:px-3 sm:gap-1"
                         onClick={() => handlePhysicalDelete(post.id)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" /> Physical deletion
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">
+                          Physical deletion
+                        </span>
                       </Button>
                     </div>
                   </div>

@@ -117,7 +117,7 @@ export function PostsRegistDialog({
             </span>
           </DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-2 py-2">
           <div className="grid gap-2">
             <Label htmlFor="title">タイトル</Label>
             <Input
@@ -125,6 +125,7 @@ export function PostsRegistDialog({
               value={newPostTitle}
               onChange={(e) => setNewPostTitle(e.target.value)}
               placeholder="タイトル"
+              className="text-base"
             />
           </div>
           <div className="grid gap-2">
@@ -134,7 +135,7 @@ export function PostsRegistDialog({
               value={newPostContent}
               onChange={(e) => setNewPostContent(e.target.value)}
               placeholder="内容"
-              className="h-32 resize-none"
+              className="h-32 resize-none text-base"
             />
           </div>
         </div>
