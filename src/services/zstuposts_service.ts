@@ -120,10 +120,18 @@ export const createZstuPost = async (
 
   let currentAtVal = undefined;
   if (params.current_at) {
-    // タイムゾーン問題を避け、かつ時刻を0時0分に固定するため、
-    // DateオブジェクトをUTC基準のISO文字列に変換し、日付部分のみを抽出してT00:00:00Zを付与する。
-    const datePart = params.current_at.toISOString().split("T")[0]; // YYYY-MM-DD
-    currentAtVal = `${datePart}T00:00:00.000Z`;
+    // JST（'Asia/Tokyo'）での日付部分を 'YYYY-MM-DD' 形式で安全に取得します。
+    // `toISOString()` は常にUTCを返すため、JSTの午前9時より前の時間は前日にされてしまう問題がありました。
+    // `Intl.DateTimeFormat` を使うことで、実行環境に依存せず、指定したタイムゾーンでの日付を正確に取得できます。
+    // 'en-CA' ロケールは 'YYYY-MM-DD' 形式を返すため、これを採用します。
+    const datePart = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(params.current_at);
+
+    currentAtVal = datePart;
   }
 
   const { error } = await supabase.from("zstu_posts").insert({
