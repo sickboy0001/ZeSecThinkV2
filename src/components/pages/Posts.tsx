@@ -14,13 +14,14 @@ import {
   Calendar,
   LayoutGrid,
   Loader2,
+  Check,
 } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   getZstuPostsWithDate,
   ZstuPost,
@@ -30,6 +31,14 @@ import {
 import { toast } from "sonner";
 import { PostsRegistDialog } from "@/components/molecules/PostsRegistDialog";
 import { AutoResizeTextarea } from "@/components/atoms/AutoResizeTextarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Props {
   userId: string;
@@ -43,6 +52,7 @@ const EditableField = ({
   viewClassName,
   inputClassName,
   placeholder = "No content",
+  ...props
 }: {
   value: string;
   onChange: (val: string) => void;
@@ -51,6 +61,7 @@ const EditableField = ({
   viewClassName?: string;
   inputClassName?: string;
   placeholder?: string;
+  [key: string]: any;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -68,6 +79,7 @@ const EditableField = ({
           onBlur={handleBlur}
           className={inputClassName}
           autoFocus
+          {...props}
         />
       );
     }
@@ -100,12 +112,45 @@ const EditableField = ({
 };
 
 export default function PostsDayView({ userId }: Props) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // URLパラメータから日付を解析する関数
+  const getDateFromParams = () => {
+    const dateParam = searchParams.get("date");
+    if (dateParam && /^\d{8}$/.test(dateParam)) {
+      const year = parseInt(dateParam.substring(0, 4), 10);
+      const month = parseInt(dateParam.substring(4, 6), 10) - 1;
+      const day = parseInt(dateParam.substring(6, 8), 10);
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    return new Date();
+  };
+
+  const [currentDate, setCurrentDate] = useState(getDateFromParams());
   const [posts, setPosts] = useState<ZstuPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<ZstuPost | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isWeekView, setIsWeekView] = useState(false);
+
+  // URLパラメータが変わったらcurrentDateを更新
+  useEffect(() => {
+    const newDate = getDateFromParams();
+    // 日付が違う場合のみ更新（無限ループ防止）
+    if (
+      newDate.getFullYear() !== currentDate.getFullYear() ||
+      newDate.getMonth() !== currentDate.getMonth() ||
+      newDate.getDate() !== currentDate.getDate()
+    ) {
+      setCurrentDate(newDate);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -116,8 +161,32 @@ export default function PostsDayView({ userId }: Props) {
         const month = String(currentDate.getMonth() + 1).padStart(2, "0");
         const day = String(currentDate.getDate()).padStart(2, "0");
         const dateStr = `${year}-${month}-${day}`;
+        let dateStrStart = "";
+        let dateStrEnd = "";
 
         const data = await getZstuPostsWithDate(userId, dateStr, dateStr);
+        if (isWeekView) {
+          const dayOfWeek = currentDate.getDay();
+          const start = new Date(currentDate);
+          start.setDate(currentDate.getDate() - dayOfWeek);
+          const end = new Date(start);
+          end.setDate(start.getDate() + 6); // Sunday to Saturday
+
+          const format = (d: Date) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${dd}`;
+          };
+          dateStrStart = format(start);
+          dateStrEnd = format(end);
+        } else {
+          const format = (d: Date) =>
+            `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          dateStrStart = format(currentDate);
+          dateStrEnd = dateStrStart;
+        }
+
         setPosts(data || []);
       } catch (error) {
         console.error(error);
@@ -127,12 +196,27 @@ export default function PostsDayView({ userId }: Props) {
       }
     };
     fetchPosts();
-  }, [userId, currentDate, refreshKey]);
+  }, [userId, currentDate, refreshKey, isWeekView]);
+
+  // 日付を変更してURLを更新する関数
+  const navigateToDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const dateStr = `${year}${month}${day}`;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("date", dateStr);
+
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   const handleDateChange = (days: number) => {
+    const diff = isWeekView ? days * 7 : days;
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + days);
-    setCurrentDate(newDate);
+    newDate.setDate(newDate.getDate() + diff);
+    navigateToDate(newDate);
   };
 
   const formatDate = (date: Date) => {
@@ -192,7 +276,6 @@ export default function PostsDayView({ userId }: Props) {
   const handleTitleSave = async (id: number, newTitle: string) => {
     try {
       await updateZstuPost(id, { title: newTitle });
-      toast.success("タイトルを更新しました");
     } catch (error) {
       console.error(error);
       toast.error("更新に失敗しました");
@@ -208,7 +291,6 @@ export default function PostsDayView({ userId }: Props) {
   const handleContentSave = async (id: number, newContent: string) => {
     try {
       await updateZstuPost(id, { content: newContent });
-      toast.success("内容を更新しました");
     } catch (error) {
       console.error(error);
       toast.error("更新に失敗しました");
@@ -220,7 +302,15 @@ export default function PostsDayView({ userId }: Props) {
       {/* --- 画像通りの日付ヘッダー --- */}
       <div className="flex items-center justify-between flex-wrap gap-2 px-1">
         <div className="flex items-center gap-3">
-          <h2 className="text-[rgb(59,130,246)] text-xl font-bold">
+          <h2
+            className={`text-xl font-bold ${
+              currentDate.getDay() === 0
+                ? "text-red-600"
+                : currentDate.getDay() === 6
+                  ? "text-blue-600"
+                  : "text-foreground"
+            }`}
+          >
             {formatDate(currentDate)}
           </h2>
           <span className="text-muted-foreground font-semibold text-sm">
@@ -233,7 +323,7 @@ export default function PostsDayView({ userId }: Props) {
             variant="outline"
             size="sm"
             className="h-8 underline font-medium"
-            onClick={() => setCurrentDate(new Date())}
+            onClick={() => router.push(pathname)}
           >
             today
           </Button>
@@ -266,10 +356,20 @@ export default function PostsDayView({ userId }: Props) {
           >
             <SquarePen className="h-4 w-4" /> add
           </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8">
+          <Button
+            variant={isWeekView ? "default" : "outline"}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setIsWeekView(true)}
+          >
             <Calendar className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8">
+          <Button
+            variant={!isWeekView ? "default" : "outline"}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setIsWeekView(false)}
+          >
             <LayoutGrid className="h-4 w-4" />
           </Button>
         </div>
@@ -277,122 +377,186 @@ export default function PostsDayView({ userId }: Props) {
 
       {/* --- 投稿リスト本体 --- */}
       <Card className="rounded-xl border shadow-sm bg-card overflow-hidden">
-        <CardContent className="p-4 md:p-6 flex flex-col gap-6">
+        <CardContent
+          className={`p-4 md:p-6 flex flex-col gap-6 ${isWeekView ? "p-0 md:p-0 gap-0" : ""}`}
+        >
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : posts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              この日の投稿はありません
+              この日の投稿はありません 投稿はありません
             </div>
+          ) : isWeekView ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Content</TableHead>
+                  <TableHead>Tags</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Public</TableHead>
+                  <TableHead>Delete</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {posts.map((post) => (
+                  <TableRow key={post.id}>
+                    <TableCell className="whitespace-nowrap">
+                      {post.current_at
+                        ? new Date(post.current_at).toLocaleDateString()
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="font-medium">{post.title}</TableCell>
+                    <TableCell
+                      className="max-w-[200px] truncate"
+                      title={post.content}
+                    >
+                      {post.content}
+                    </TableCell>
+                    <TableCell>{post.tags?.join(", ")}</TableCell>
+                    <TableCell>{post.second}s</TableCell>
+                    <TableCell>
+                      {post.public_flg ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {post.delete_flg ? (
+                        <Check className="h-4 w-4 text-red-500" />
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
-            posts.map((post, index) => (
-              <div key={post.id} className="flex flex-col gap-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  {/* タイトル */}
-                  <div className="flex items-center gap-1 flex-1 mr-2">
-                    <Lock className="h-4 w-4 text-red-800 shrink-0" />
-                    <EditableField
-                      value={post.title}
-                      onChange={(val) => handleTitleChange(post.id, val)}
-                      onSave={(val) => handleTitleSave(post.id, val)}
-                      viewClassName="text-lg font-bold hover:underline decoration-dashed underline-offset-4"
-                      inputClassName="text-lg font-bold border-none shadow-none focus-visible:ring-0 px-1 h-auto py-0 bg-transparent"
-                      placeholder="タイトルなし"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {/* 編集ボタン */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 border-slate-200"
-                      onClick={() => {
-                        setEditingPost(post);
-                        setIsCreateOpen(true);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {/* タグ付けボタン */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 border-slate-200"
-                    >
-                      <Hash className="h-4 w-4" />
-                    </Button>
-                    {/* コピー */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 border-slate-200"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* コンテンツ */}
-
-                <EditableField
-                  isTextarea
-                  value={post.content}
-                  onChange={(val) => handleContentChange(post.id, val)}
-                  onSave={(val) => handleContentSave(post.id, val)}
-                  viewClassName="text-[17px] leading-relaxed whitespace-pre-wrap font-normal hover:bg-slate-50/50 rounded p-1 -ml-1 transition-colors"
-                  inputClassName="text-[17px] leading-relaxed font-normal min-h-[120px] resize-none border-none shadow-none focus-visible:ring-0 px-0 py-0 bg-transparent"
-                  placeholder="内容なし"
-                />
-
-                <div className="flex flex-col gap-1">
-                  <div className="text-xs text-muted-foreground">
-                    [{post.second}sec] [wr...
-                  </div>
-
-                  <div className="flex items-center flex-wrap gap-x-4 gap-y-1">
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id={`pub-${post.id}`}
-                        checked={post.public_flg}
-                        onCheckedChange={(c) => handlePublicChange(post.id, c)}
+            <>
+              {posts.map((post, index) => (
+                <div key={post.id} className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    {/* タイトル */}
+                    <div className="flex items-center gap-1 flex-1 mr-2">
+                      <Lock className="h-4 w-4 text-red-800 shrink-0" />
+                      <EditableField
+                        value={post.title}
+                        onChange={(val) => handleTitleChange(post.id, val)}
+                        onSave={(val) => handleTitleSave(post.id, val)}
+                        viewClassName="text-lg font-bold hover:underline decoration-dashed underline-offset-4"
+                        inputClassName="text-lg font-bold border-none shadow-none focus-visible:ring-0 px-1 h-auto py-0 bg-transparent focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-colors"
+                        placeholder="タイトルなし"
+                        onKeyDown={(
+                          e: React.KeyboardEvent<HTMLInputElement>,
+                        ) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            e.currentTarget.blur();
+                          }
+                        }}
                       />
-                      {/* 公開スイッチ */}
-                      <label htmlFor={`pub-${post.id}`} className="text-sm">
-                        public
-                      </label>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id={`del-${post.id}`}
-                        checked={post.delete_flg}
-                        onCheckedChange={(c) => handleDeleteChange(post.id, c)}
-                      />
-                      {/* 削除スイッチ */}
 
-                      <label htmlFor={`del-${post.id}`} className="text-sm">
-                        delete
-                      </label>
+                    <div className="flex items-center gap-1">
+                      {/* 編集ボタン */}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 border-slate-200"
+                        onClick={() => {
+                          setEditingPost(post);
+                          setIsCreateOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {/* タグ付けボタン */}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 border-slate-200"
+                      >
+                        <Hash className="h-4 w-4" />
+                      </Button>
+                      {/* コピー */}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 border-slate-200"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
                     </div>
-                    {/* 物理削除ボタン */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs gap-1 ml-auto border-slate-200"
-                      onClick={() => handlePhysicalDelete(post.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" /> Physical deletion
-                    </Button>
                   </div>
-                </div>
 
-                {index !== posts.length - 1 && (
-                  <Separator className="mt-4 bg-slate-300" />
-                )}
-              </div>
-            ))
+                  {/* コンテンツ */}
+
+                  <EditableField
+                    isTextarea
+                    value={post.content}
+                    onChange={(val) => handleContentChange(post.id, val)}
+                    onSave={(val) => handleContentSave(post.id, val)}
+                    viewClassName="text-[17px] leading-relaxed whitespace-pre-wrap font-normal hover:bg-slate-50/50 rounded p-1 -ml-1 transition-colors"
+                    inputClassName="text-[17px] leading-relaxed font-normal min-h-[120px] resize-none border-none shadow-none focus-visible:ring-0 px-0 py-0 bg-transparent"
+                    placeholder="内容なし"
+                  />
+
+                  <div className="flex flex-col gap-1">
+                    <div className="text-xs text-muted-foreground">
+                      [{post.second}sec] [wr...
+                    </div>
+
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-1">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id={`pub-${post.id}`}
+                          checked={post.public_flg}
+                          onCheckedChange={(c) =>
+                            handlePublicChange(post.id, c)
+                          }
+                        />
+                        {/* 公開スイッチ */}
+                        <label htmlFor={`pub-${post.id}`} className="text-sm">
+                          public
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id={`del-${post.id}`}
+                          checked={post.delete_flg}
+                          onCheckedChange={(c) =>
+                            handleDeleteChange(post.id, c)
+                          }
+                        />
+                        {/* 削除スイッチ */}
+
+                        <label htmlFor={`del-${post.id}`} className="text-sm">
+                          delete
+                        </label>
+                      </div>
+                      {/* 物理削除ボタン */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1 ml-auto border-slate-200"
+                        onClick={() => handlePhysicalDelete(post.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Physical deletion
+                      </Button>
+                    </div>
+                  </div>
+
+                  {index !== posts.length - 1 && (
+                    <Separator className="mt-4 bg-slate-300" />
+                  )}
+                </div>
+              ))}
+            </>
           )}
 
           <Button

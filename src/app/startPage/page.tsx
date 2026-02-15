@@ -72,8 +72,12 @@ export default function StartPage() {
             className="w-full bg-background p-4 sm:p-8 rounded-xl shadow-lg border"
           >
             <AccordionItem value="guide-content">
-              <AccordionTrigger className="text-xl text-left font-bold hover:no-underline whitespace-nowrap">
-                スタートガイドを開く
+              <AccordionTrigger className="hover:no-underline">
+                <div className="border-l-4 border-primary pl-4 py-1 text-left">
+                  <span className="text-xl font-bold">
+                    スタートガイドを開く
+                  </span>
+                </div>
               </AccordionTrigger>
               <AccordionContent className="pt-4">
                 <MarkdownRenderer>{guides_content}</MarkdownRenderer>

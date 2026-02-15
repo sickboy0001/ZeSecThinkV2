@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export const AutoResizeTextarea = ({
   value,
@@ -36,7 +37,10 @@ export const AutoResizeTextarea = ({
         onChange(e);
       }}
       onBlur={onBlur}
-      className={className}
+      className={cn(
+        "focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-colors",
+        className,
+      )}
       rows={1}
       {...props}
     />

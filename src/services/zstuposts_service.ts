@@ -43,7 +43,7 @@ export async function getZstuPostsSummary(
       SUM(COALESCE(length(p.content), 0)) AS total_chars -- 文字数の合計
   FROM 
       -- 今日から遡って7日間の日付列を生成
-      generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, '1 day') AS date_series(day)
+      generate_series((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date - INTERVAL '6 days', (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date, '1 day') AS date_series(day)
   LEFT JOIN 
       zstu_posts p ON p.current_at::date = date_series.day::date 
       AND p.user_id = '${userid}'
@@ -134,8 +134,8 @@ export const createZstuPost = async (
     tags: params.tags,
     second: params.second,
     current_at: currentAtVal,
-    public_flg: true,
-    public_content_flg: true,
+    public_flg: false,
+    public_content_flg: false,
   });
 
   if (error) {
