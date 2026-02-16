@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,10 @@ import {
 import { toast } from "sonner";
 import { typo_content } from "@/constants/gai_constants";
 import {
+  processGeminiRefinement,
+  RefinementResult,
+} from "@/services/gemini_service";
+import {
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -39,21 +43,8 @@ interface Props {
 
 type Step = "select" | "confirm" | "result";
 
-type RefinementResult = {
-  id: number;
-  original_text: string;
-  fixed_title: string;
-  fixed_text: string;
-  fixed_tags?: string[];
-  changes: string[];
-};
-
 type EditableRefinementResult = RefinementResult & {
   fixed_tags_str: string;
-};
-
-type AiResponse = {
-  refinement_results: RefinementResult[];
 };
 
 export default function GeminiTypo({ userId }: Props) {
@@ -74,80 +65,33 @@ export default function GeminiTypo({ userId }: Props) {
   >([]);
   const [publicFlags, setPublicFlags] = useState<Record<number, boolean>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [executionLogs, setExecutionLogs] = useState<string[]>([]);
+  const [isComplete, setIsComplete] = useState(false);
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
     setAiLoading(true);
     setResult("");
     setEditableResults([]);
+    setExecutionLogs([]);
+    setIsComplete(false);
 
     try {
       const selectedPosts = posts.filter((post) =>
         selectedPostIds.has(post.id),
       );
-      const chunkSize = 100;
-      let allRefinementResults: RefinementResult[] = [];
-      let combinedRawText = "";
 
-      // チャンク分割して順次処理
-      for (let i = 0; i < selectedPosts.length; i += chunkSize) {
-        if (i > 0) {
-          toast.info("APIレート制限回避のため、20秒間待機しています...");
-          await new Promise((resolve) => setTimeout(resolve, 20000));
-        }
+      const { rawText, results } = await processGeminiRefinement(
+        selectedPosts,
+        input,
+        (log) => setExecutionLogs((prev) => [...prev, log]),
+      );
 
-        const chunk = selectedPosts.slice(i, i + chunkSize);
-
-        // チャンク用のJSONデータ作成
-        const requestMemo = chunk.map((post) => ({
-          id: post.id,
-          tags: post.tags || [],
-          title: post.title,
-          text: post.content,
-        }));
-        const requestJson = JSON.stringify(
-          { request_memo: requestMemo },
-          null,
-          2,
-        );
-
-        // プロンプト作成: {memo} を置換、なければ末尾に追加
-        let prompt = "";
-        if (input.includes("{memo}")) {
-          prompt = input.replace("{memo}", requestJson);
-        } else {
-          prompt = `${input}\n\n${requestJson}`;
-        }
-
-        const res = await fetch("/api/gemini", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
-        });
-        if (!res.ok) throw new Error(res.statusText);
-        const data = await res.json();
-
-        combinedRawText += data.text + "\n";
-
-        // 結果のパースと結合
-        try {
-          const cleanJson = data.text.replace(/```json\n|\n```/g, "").trim();
-          const parsed = JSON.parse(cleanJson) as AiResponse;
-          if (parsed.refinement_results) {
-            allRefinementResults = [
-              ...allRefinementResults,
-              ...parsed.refinement_results,
-            ];
-          }
-        } catch (e) {
-          console.warn("Failed to parse chunk result", e);
-        }
-      }
-
-      setResult(combinedRawText);
+      setResult(rawText);
 
       // 編集用ステートの初期化
-      const editable = allRefinementResults.map((item) => ({
+      const editable = results.map((item) => ({
         ...item,
         fixed_tags_str: item.fixed_tags?.join(", ") || "",
       }));
@@ -155,15 +99,19 @@ export default function GeminiTypo({ userId }: Props) {
 
       // Publicフラグの初期化
       const flags: Record<number, boolean> = {};
-      allRefinementResults.forEach((item) => {
+      results.forEach((item) => {
         flags[item.id] = true;
       });
       setPublicFlags(flags);
 
-      setStep("result");
+      setIsComplete(true);
     } catch (error) {
       console.error(error);
       toast.error("AI生成に失敗しました");
+      setExecutionLogs((prev) => [
+        ...prev,
+        "エラーが発生したため処理を中断しました。",
+      ]);
     } finally {
       setAiLoading(false);
     }
@@ -180,6 +128,7 @@ export default function GeminiTypo({ userId }: Props) {
     const prompt = typo_content.replace("{tags}", "");
 
     setInput(prompt);
+    setIsComplete(false);
     setStep("confirm");
   };
 
@@ -288,6 +237,12 @@ export default function GeminiTypo({ userId }: Props) {
     }
   };
 
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [executionLogs]);
+
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
       <header className="flex items-center justify-between">
@@ -328,16 +283,31 @@ export default function GeminiTypo({ userId }: Props) {
               onChange={(e) => setInput(e.target.value)}
               className="min-h-[200px] bg-muted/50 font-mono"
             />
+            {executionLogs.length > 0 && (
+              <div className="bg-black/90 text-green-400 p-4 rounded-md h-48 overflow-y-auto font-mono text-xs space-y-1 shadow-inner">
+                {executionLogs.map((log, i) => (
+                  <div key={i}>&gt; {log}</div>
+                ))}
+                {aiLoading && <div className="animate-pulse">&gt; _</div>}
+                <div ref={logsEndRef} />
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <Button variant="outline" onClick={() => setStep("select")}>
                 戻る
               </Button>
-              <Button onClick={handleSubmit} disabled={aiLoading || !input}>
-                {aiLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                修正を実行
-              </Button>
+              {isComplete ? (
+                <Button onClick={() => setStep("result")}>
+                  修正確認画面へ <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : (
+                <Button onClick={handleSubmit} disabled={aiLoading || !input}>
+                  {aiLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  修正を実行
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

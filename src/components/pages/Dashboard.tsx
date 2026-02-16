@@ -110,7 +110,7 @@ export default function Dashboard({ userId }: Props) {
               className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
             >
               <ClipboardList className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              <span>Posts</span>
+              <span>投稿-Posts</span>
             </Button>
           </Link>
           <Link href="/zst/logs">
@@ -119,7 +119,7 @@ export default function Dashboard({ userId }: Props) {
               className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
             >
               <Settings className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              <span>Logs</span>
+              <span>記録-Logs</span>
             </Button>
           </Link>
           <Link href="/zst/analytics">
@@ -128,7 +128,7 @@ export default function Dashboard({ userId }: Props) {
               className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
             >
               <PieChart className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              <span>分析表示</span>
+              <span>分析表示-Analytics</span>
             </Button>
           </Link>
         </div>
