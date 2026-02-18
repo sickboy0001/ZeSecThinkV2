@@ -54,7 +54,7 @@ export function Sidebar() {
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-8 px-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold italic">H</span>
+            <span className="text-primary-foreground font-bold italic">Z</span>
           </div>
           <div>
             <div className="text-xl font-bold tracking-tight leading-none">

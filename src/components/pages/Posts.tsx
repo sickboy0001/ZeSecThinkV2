@@ -359,7 +359,7 @@ export default function PostsDayView({ userId }: Props) {
                         onChange={(val) => handleTitleChange(post.id, val)}
                         onSave={(val) => handleTitleSave(post.id, val)}
                         viewClassName="text-lg font-bold hover:underline decoration-dashed underline-offset-4"
-                        inputClassName="text-lg font-bold border-none shadow-none focus-visible:ring-0 px-1 h-auto py-0 bg-transparent focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-colors"
+                        inputClassName="text-lg! font-bold border-none shadow-none focus-visible:ring-0 px-0 h-auto py-0 bg-transparent focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-colors"
                         placeholder="タイトルなし"
                         onKeyDown={(
                           e: React.KeyboardEvent<HTMLInputElement>,
@@ -484,6 +484,7 @@ export default function PostsDayView({ userId }: Props) {
         onSuccess={() => setRefreshKey((prev) => prev + 1)}
         post={editingPost}
         currentDate={currentDate}
+        postCount={posts.length}
       />
     </div>
   );

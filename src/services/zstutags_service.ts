@@ -1,0 +1,74 @@
+"use server";
+
+import { executeQuery } from "@/lib/actions";
+import { createClient } from "@/lib/supabase/server";
+
+export interface Tag {
+  id: number;
+  tag_name: string;
+  name: string;
+  aliases: string[];
+  description: string;
+  display_order: number;
+  is_active: boolean;
+  is_send_ai: boolean;
+  updated_at: Date;
+}
+
+export async function getZstuTags(userid: string): Promise<Tag[] | null> {
+  const query = `
+      select 
+          id,
+          tag_name , 
+          name , 
+          COALESCE(aliases, '{}') as aliases , 
+          description , 
+          display_order , 
+          is_active , 
+          is_send_ai , 
+          updated_at
+      from zstu_tag_descriptions
+      where user_id = '${userid}'
+      order by display_order 
+  `;
+
+  const result = await executeQuery(query);
+
+  if (
+    !result.success ||
+    !Array.isArray(result.data) ||
+    result.data.length === 0
+  ) {
+    console.error(`Failed to fetch tags for user ${userid}:`, result.error);
+    return null;
+  }
+
+  return result.data as unknown as Tag[];
+}
+
+export async function updateZstuTag(id: number, updates: Partial<Tag>) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("zstu_tag_descriptions")
+    .update(updates)
+    .eq("id", id);
+
+  if (error) {
+    console.error(`Failed to update tag ${id}:`, error);
+    throw error;
+  }
+}
+
+export async function createZstuTag(userId: string, tag: Partial<Tag>) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("zstu_tag_descriptions")
+    .insert({ ...tag, user_id: userId })
+    .select();
+
+  if (error) {
+    console.error("Failed to create tag:", error);
+    throw error;
+  }
+  return data?.[0] as Tag;
+}

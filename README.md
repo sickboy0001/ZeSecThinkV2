@@ -158,27 +158,51 @@ export default async function Page() {
 | **created_at** | 作成日時 | `timestamp` | ◯ | `CURRENT_TIMESTAMP` | レコード作成日 |
 | **updated_at** | 更新日時 | `timestamp` | ◯ | `CURRENT_TIMESTAMP` | レコード更新日 |
 
+
+## zstu_tag_descriptions
+| カラム名 | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| `id` | UUID | PK | タグの一意識別子 |
+| `user_id` | UUID / Int | FK | どのユーザーのタグかを識別 |
+| `tag_name` | String(50) | Not Null | AIへの指示に使う短い識別子 (例: `zstv2`) |
+| `name` | String(100) | Not Null | 画面表示用の正式名称 (例: `zerosecthinkv2`) |
+| `aliases` | JSONB |  | 同義語リスト（重複回避用）(例：["パイソン", "Py", "python3"]) |
+| `description` | Text | - | タグの意味やAIへの補足説明  |
+| **`display_order`** | Int | Default: 0 | 画面上での表示順（昇順・降順でソート用） |
+| **`is_active`** | Boolean | Default: true | 有効/無効フラグ。削除せずに非表示にしたい場合に使用 |
+| **`is_send_ai`** | Boolean | Default: true | **AIへの送信対象にするか。** (※) |
+| **`created_at`** | Timestamp | Not Null | レコード作成日時 |
+| **`updated_at`** | Timestamp | Not Null | レコード更新日時 |
+
 ---
 
-### 実装・運用のためのTips
+### 各項目の検討理由と詳細
 
-* **インデックス作成:** タグでの検索（「このタグを含む投稿を表示」）を行う場合は、以下のインデックスを貼っておくと高速です。
-```sql
-CREATE INDEX idx_zstu_posts_tags ON zstu_posts USING GIN (tags);
+#### 1. `is_active` (論理削除・有効化)
 
-```
+* **必要性：** 非常に高いです。
+* **理由：** 過去のメモに関連付けられているタグを物理削除してしまうと、過去ログの整合性が崩れる可能性があります。「今は使わないけれどデータとして残しておきたい」場合に、`false` にすることで管理画面や選択肢から除外できます。
+
+#### 2. `is_send_ai` (AI送信フラグ) ※「is_sendai」の解釈
+
+* **必要性：** 高いです。
+* **理由：** おそらく `is_send_ai`（AIに送るかどうか）の意図かと推察します。タグが増えてくると、全てのタグをプロンプト（`{tags}`）に含めるとトークン数（コスト）を消費しすぎたり、AIが混乱したりします。「このタグはAIに文脈を理解させるために必須」というものにチェックを入れて制御できると便利です。
+
+#### 3. `display_order` (表示順)
+
+* **必要性：** 高いです。
+* **理由：** 作成順（`created_at`）だけでなく、よく使うタグを上に固定（ピン留め）したり、ユーザーが任意に並び替えたりできると、タグ管理画面の使い勝手が劇的に向上します。
+
+#### 4. `created_at` / `updated_at` (タイムスタンプ)
+
+* **必要性：** 必須レベルです。
+* **理由：** データのデバッグ時や、「最近作ったタグから表示する」といった並び替え、またAIの処理履歴との突合に必ず必要になります。
 
 
-* **クエリ例:** 「学習」タグが含まれる投稿を取得する場合：
-```sql
-SELECT * FROM zstu_posts WHERE '学習' = ANY(tags);
--- または --
-SELECT * FROM zstu_posts WHERE tags @> ARRAY['学習'];
-
-```
+---
 
 
-**この構成をベースに、次はコメント（`zstu_comments`）側の定義も作成しましょうか？それともSQLの作成に移りますか？**
+
 ### SQL 実装コード
 
 ```sql
@@ -211,6 +235,28 @@ CREATE TABLE zstu_posts (
 CREATE INDEX idx_zstu_posts_tags ON zstu_posts USING GIN (tags);
 
 
+-- 1. zstu_tag_descriptions テーブルの作成
+CREATE TABLE zstu_tag_descriptions (
+    id SERIAL PRIMARY KEY,                          -- integer型の自動採番
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    tag_name VARCHAR(50) NOT NULL,                  -- 表示用（短縮形）
+    name VARCHAR(100) NOT NULL,                     -- 正式名称
+    aliases JSONB DEFAULT '[]'::jsonb,
+    description TEXT,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_send_ai BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- 2. 検索性を高めるためのインデックス
+-- ユーザーごとのタグ取得を高速化
+CREATE INDEX idx_zstu_tags_user_id ON zstu_tag_descriptions(user_id);
+-- 表示順でのソートを高速化
+CREATE INDEX idx_zstu_tags_display_order ON zstu_tag_descriptions(display_order);
+
 ```
 
 ## todo
@@ -229,9 +275,13 @@ CREATE INDEX idx_zstu_posts_tags ON zstu_posts USING GIN (tags);
 - [x] コンバート機能
 
 ## 履歴
+- 2026年2月19日
+  - UI回り調整
 - 2026年2月16日
   - 日付回りやはり引っかかる→解消済み
 - 2026年2月15日
   - [デプロイ・Vercel](https://zerosecthinkv2.vercel.app/dashboard)
   - １日ぐらいでここまでひとまず完了、デプロイまで実施
+
+
 

@@ -27,6 +27,7 @@ interface Props {
   onSuccess: () => void;
   currentDate: Date;
   post?: ZstuPost | null;
+  postCount: number;
 }
 
 export function PostsRegistDialog({
@@ -36,6 +37,7 @@ export function PostsRegistDialog({
   onSuccess,
   currentDate,
   post,
+  postCount,
 }: Props) {
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostTitle, setNewPostTitle] = useState("");
@@ -106,6 +108,12 @@ export function PostsRegistDialog({
     }
   };
 
+  const today = new Date();
+  const isToday =
+    today.getFullYear() === currentDate.getFullYear() &&
+    today.getMonth() === currentDate.getMonth() &&
+    today.getDate() === currentDate.getDate();
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -115,9 +123,19 @@ export function PostsRegistDialog({
             <span className="text-sm font-normal text-muted-foreground ml-2">
               [{currentDate.getMonth() + 1}月{currentDate.getDate()}日]
             </span>
+            {postCount !== 0 && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                [{postCount}]
+              </span>
+            )}
           </DialogTitle>
+          {!isToday && (
+            <p className="text-xs text-red-500 font-bold text-left">
+              ※今日以外の日付を編集中です
+            </p>
+          )}
         </DialogHeader>
-        <div className="grid gap-2 py-2">
+        <div className="grid gap-2 py-0.5">
           <div className="grid gap-2">
             <Label htmlFor="title">タイトル</Label>
             <Input
@@ -125,7 +143,7 @@ export function PostsRegistDialog({
               value={newPostTitle}
               onChange={(e) => setNewPostTitle(e.target.value)}
               placeholder="タイトル"
-              className="text-base"
+              className="text-lg!"
             />
           </div>
           <div className="grid gap-2">
@@ -135,7 +153,7 @@ export function PostsRegistDialog({
               value={newPostContent}
               onChange={(e) => setNewPostContent(e.target.value)}
               placeholder="内容"
-              className="h-32 resize-none text-base"
+              className="h-40 resize-none text-lg"
             />
           </div>
         </div>
@@ -143,7 +161,7 @@ export function PostsRegistDialog({
           <Button
             onClick={handleCreatePost}
             disabled={isSubmitting}
-            className="w-full"
+            className="w-full py-1 text-lg"
           >
             {isSubmitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

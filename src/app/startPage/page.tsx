@@ -25,7 +25,7 @@ export default function StartPage() {
       <header className="px-6 h-16 flex items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold italic">H</span>
+            <span className="text-primary-foreground font-bold italic">Z</span>
           </div>
           <span className="font-bold text-xl tracking-tight">ZeroSecThink</span>
         </div>
