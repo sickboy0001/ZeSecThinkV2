@@ -91,7 +91,7 @@ const EditableField = ({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className={`cursor-pointer min-h-[24px] ${viewClassName || ""}`}
+      className={`cursor-pointer min-h-6 ${viewClassName || ""}`}
     >
       {value || (
         <span className="text-muted-foreground opacity-50">{placeholder}</span>
@@ -363,7 +363,7 @@ export default function PostsDayView({ userId }: Props) {
                 <div key={post.id} className="flex flex-col gap-1">
                   <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
                     {/* タイトル */}
-                    <div className="flex items-center gap-1 min-w-[200px]">
+                    <div className="flex items-center gap-1 min-w-50">
                       <Lock className="h-4 w-4 text-red-800 shrink-0" />
                       <EditableField
                         value={post.title}

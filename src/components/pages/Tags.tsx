@@ -276,7 +276,7 @@ export default function Tags({ userId }: Props) {
                     <TableHead>Active</TableHead>
                     <TableHead>Send AI</TableHead>
                     <TableHead>Updated</TableHead>
-                    <TableHead className="w-[50px]">Order</TableHead>
+                    <TableHead className="w-12.5">Order</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -302,7 +302,7 @@ export default function Tags({ userId }: Props) {
                               onBlur={(e) =>
                                 handleBlur(tag.id, "tag_name", e.target.value)
                               }
-                              className="min-w-[120px]"
+                              className="min-w-30"
                             />
                           </TableCell>
                           <TableCell>
@@ -311,7 +311,7 @@ export default function Tags({ userId }: Props) {
                               onBlur={(e) =>
                                 handleBlur(tag.id, "name", e.target.value)
                               }
-                              className="min-w-[120px]"
+                              className="min-w-30"
                             />
                           </TableCell>
                           <TableCell>
@@ -320,7 +320,7 @@ export default function Tags({ userId }: Props) {
                               onBlur={(e) =>
                                 handleAliasesBlur(tag.id, e.target.value)
                               }
-                              className="min-w-[150px]"
+                              className="min-w-37.5"
                             />
                           </TableCell>
                           <TableCell>
@@ -333,7 +333,7 @@ export default function Tags({ userId }: Props) {
                                   e.target.value,
                                 )
                               }
-                              className="min-w-[200px]"
+                              className="min-w-50"
                             />
                           </TableCell>
                           <TableCell>
@@ -379,7 +379,7 @@ export default function Tags({ userId }: Props) {
       </Card>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-125">
           <DialogHeader>
             <DialogTitle>新規タグ登録</DialogTitle>
           </DialogHeader>

@@ -143,7 +143,7 @@ export default function Logs({ userId }: Props) {
                           : "-"}
                       </TableCell>
                       <TableCell
-                        className="font-medium max-w-[150px] truncate"
+                        className="font-medium max-w-37.5 truncate"
                         title={post.title}
                       >
                         {post.title}
