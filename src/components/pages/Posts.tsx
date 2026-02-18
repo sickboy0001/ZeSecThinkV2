@@ -344,7 +344,18 @@ export default function PostsDayView({ userId }: Props) {
             </div>
           ) : posts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              この日の投稿はありません 投稿はありません
+              {new Date().toDateString() === currentDate.toDateString() ? (
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-lg font-semibold">
+                    最初の投稿を作成しましょう
+                  </span>
+                  <span className="text-sm">
+                    新しいアイデアや記録を残しましょう
+                  </span>
+                </div>
+              ) : (
+                "この日の投稿はありません"
+              )}
             </div>
           ) : (
             <>
