@@ -79,7 +79,11 @@ export async function processGeminiRefinement(
         });
 
         if (!res.ok) {
-          throw new Error(res.statusText);
+          const error: any = new Error(
+            res.statusText || `HTTP Error ${res.status}`,
+          );
+          error.status = res.status;
+          throw error;
         }
 
         const data = await res.json();
@@ -111,18 +115,28 @@ export async function processGeminiRefinement(
           log(`警告: チャンク ${chunkIndex} のJSONパースに失敗しました。`);
         }
         success = true;
-      } catch (error) {
+      } catch (error: any) {
         retryCount++;
+
         if (retryCount > maxRetries) {
           log(
             `エラー: チャンク ${chunkIndex} のリクエストが失敗しました (最大リトライ回数超過): ${error}`,
           );
           throw error;
         }
-        log(
-          `エラー: チャンク ${chunkIndex} のリクエストが失敗しました (${error})。5秒後にリトライします (${retryCount}/${maxRetries})...`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        let delay = 5000;
+        if (error.status === 503) {
+          delay = 5000 * Math.pow(2, retryCount); // 503の場合は待機時間を倍々に増やす (10s, 20s, 40s...)
+          log(
+            `負荷高騰(503)のため再試行中... 残り${maxRetries - retryCount + 1}回。${delay / 1000}秒待機します。`,
+          );
+        } else {
+          log(
+            `エラー: チャンク ${chunkIndex} のリクエストが失敗しました (${error})。${delay / 1000}秒後にリトライします (${retryCount}/${maxRetries})...`,
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
