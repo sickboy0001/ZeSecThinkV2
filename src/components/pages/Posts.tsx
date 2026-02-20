@@ -274,7 +274,7 @@ export default function PostsDayView({ userId }: Props) {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 flex flex-col gap-4">
+    <div className="w-full max-w-2xl mx-auto p-4 flex flex-col md:gap-4 gap-2">
       {/* --- 画像通りの日付ヘッダー --- */}
       <div className="flex items-center justify-between flex-wrap gap-2 px-1">
         <div className="flex items-center gap-3">
@@ -294,7 +294,7 @@ export default function PostsDayView({ userId }: Props) {
           </span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -337,7 +337,7 @@ export default function PostsDayView({ userId }: Props) {
 
       {/* --- 投稿リスト本体 --- */}
       <Card className="rounded-xl border shadow-sm bg-card overflow-hidden">
-        <CardContent className="p-4 md:p-6 flex flex-col gap-6">
+        <CardContent className="p-2 md:p-6 flex flex-col md:gap-6 gap-1">
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
