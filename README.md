@@ -258,21 +258,6 @@ CREATE INDEX idx_zstu_tags_user_id ON zstu_tag_descriptions(user_id);
 CREATE INDEX idx_zstu_tags_display_order ON zstu_tag_descriptions(display_order);
 
 ```
-
-## 画面構成
-
-現状
-・Tags
-・GeminiTypo
-
-
-構成後
-・Tags：タグの一覧（１か月分）、そこから、タグ指定して、Post抜粋したりできる。
-・AI
-　・Summary：サマリを作成する画面
-　・Typo：（GeminiTypo→AI＞Typo）日々のポストに対して、タイポ、タグ付けをする
-　・Tags：（Tags→AI＞Tags）生成AIに送信するタグの確認
-　・History：生成AIの記録、日時、ログ、変更点、注意点などの、生成AIの記録、Tags作成の根拠にする。
 　
 
 ## todo
@@ -281,16 +266,15 @@ CREATE INDEX idx_zstu_tags_display_order ON zstu_tag_descriptions(display_order)
 - [ ] ログの見直し
 - [ ] 形態素解析した結果の表示
 - [ ] 形態素解析した結果からワードクラウドの展開
-- [ ] AI利用してのタイポミスの保管：確認→登録
-- [ ] AI利用してタグの付与機能：確認→登録
- - 429 RESOURCE_EXHAUSTED 使用量オーバーが出る。少し待つしかない。それか有料化か・・・
- - https://aistudio.google.com/app/usage?timeRange=last-hour&project=gen-lang-client-0462450144&tab=rate-limit
- - RPD (Requests Per Day): 1日 15件程度（グラフの推移から推測）
-現状: 本日のリクエスト可能枠が 「0」 になっています。
-- [ ] タグについては専用用語として、説明含めて登録できるようにする
+- [x] AIログの登録
+- [x] AI利用してのタイポミスの保管：確認→登録
+- [x] AI利用してタグの付与機能：確認→登録
+- [x] タグについては専用用語として、説明含めて登録できるようにする
 - [x] コンバート機能
 
 ## 履歴
+- 2026年2月21日
+  - TursoでAILog残すように、それ見て諸々調整できるようにする予定
 - 2026年2月19日
   - UI回り調整
 - 2026年2月16日
