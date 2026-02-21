@@ -259,6 +259,22 @@ CREATE INDEX idx_zstu_tags_display_order ON zstu_tag_descriptions(display_order)
 
 ```
 
+## 画面構成
+
+現状
+・Tags
+・GeminiTypo
+
+
+構成後
+・Tags：タグの一覧（１か月分）、そこから、タグ指定して、Post抜粋したりできる。
+・AI
+　・Summary：サマリを作成する画面
+　・Typo：（GeminiTypo→AI＞Typo）日々のポストに対して、タイポ、タグ付けをする
+　・Tags：（Tags→AI＞Tags）生成AIに送信するタグの確認
+　・History：生成AIの記録、日時、ログ、変更点、注意点などの、生成AIの記録、Tags作成の根拠にする。
+　
+
 ## todo
 
 - [ ] ダッシュボード見直し

@@ -1,8 +1,7 @@
 "use server";
-
+import Tags from "@/components/pages/AI/Tags";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import GeminiTypo from "@/components/pages/GeminiTypo";
 
 export default async function Page() {
   const supabase = await createClient();
@@ -12,5 +11,5 @@ export default async function Page() {
 
   if (!user) redirect("/login");
 
-  return <GeminiTypo userId={user.id} />;
+  return <Tags userId={user.id} />;
 }

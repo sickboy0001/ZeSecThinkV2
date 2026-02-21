@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +20,7 @@ import {
   getZstuPostsWithDate,
   ZstuPost,
   updateZstuPost,
+  updateZstuPostWithAILog,
 } from "@/services/zstuposts_service";
 import { toast } from "sonner";
 import { typo_content } from "@/constants/gai_constants";
@@ -35,6 +37,7 @@ import {
   ArrowRight,
   FileText,
   ClipboardCheck,
+  X,
 } from "lucide-react";
 
 interface Props {
@@ -68,7 +71,7 @@ export default function GeminiTypo({ userId }: Props) {
   const [executionLogs, setExecutionLogs] = useState<string[]>([]);
   const [isComplete, setIsComplete] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
-
+  const [currentBatchId, setCurrentBatchId] = useState<number | null>(null);
   const handleSubmit = async () => {
     if (!input.trim()) return;
     setAiLoading(true);
@@ -82,7 +85,8 @@ export default function GeminiTypo({ userId }: Props) {
         selectedPostIds.has(post.id),
       );
 
-      const { rawText, results } = await processGeminiRefinement(
+      const { rawText, results, batchId } = await processGeminiRefinement(
+        userId,
         selectedPosts,
         input,
         (log) => setExecutionLogs((prev) => [...prev, log]),
@@ -90,6 +94,10 @@ export default function GeminiTypo({ userId }: Props) {
 
       setResult(rawText);
 
+      // バッチIDをステートに保存 ★重要
+      if (batchId) {
+        setCurrentBatchId(batchId);
+      }
       // 編集用ステートの初期化
       const editable = results.map((item) => ({
         ...item,
@@ -125,7 +133,7 @@ export default function GeminiTypo({ userId }: Props) {
 
     // テンプレートのプレースホルダーを置換 ({memo} は残す)
     // データ量が多い場合、ここで展開するとUIが重くなる＆分割送信できないため
-    const prompt = typo_content.replace("{tags}", "");
+    const prompt = typo_content;
 
     setInput(prompt);
     setIsComplete(false);
@@ -133,10 +141,14 @@ export default function GeminiTypo({ userId }: Props) {
   };
 
   const handleUpdatePosts = async () => {
+    if (!currentBatchId) {
+      toast.error("バッチ情報が見つかりません。");
+      return;
+    }
     setUpdateLoading(true);
     try {
       const updates = editableResults.map((item) =>
-        updateZstuPost(item.id, {
+        updateZstuPostWithAILog(item.id, currentBatchId, {
           title: item.fixed_title,
           content: item.fixed_text,
           public_flg: publicFlags[item.id] ?? true,
@@ -277,6 +289,7 @@ export default function GeminiTypo({ userId }: Props) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* 送信内容（テンプレートの提示） */}
             <Textarea
               placeholder="修正したいテキストを入力..."
               value={input}
@@ -315,6 +328,7 @@ export default function GeminiTypo({ userId }: Props) {
 
       {step === "result" && (
         <Card>
+          {/* Step 3: 結果の確認と反映 */}
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ClipboardCheck className="h-5 w-5 text-green-500" />
@@ -405,17 +419,41 @@ export default function GeminiTypo({ userId }: Props) {
                           <div className="mt-2 pt-2 border-t border-green-200 flex flex-col gap-2">
                             <div className="text-xs text-muted-foreground">
                               <span className="font-semibold">Tags:</span>
-                              <Input
-                                value={item.fixed_tags_str}
-                                onChange={(e) => {
-                                  const newResults = [...editableResults];
-                                  newResults[index].fixed_tags_str =
-                                    e.target.value;
-                                  setEditableResults(newResults);
-                                }}
-                                className="mt-1 bg-white h-8 text-xs"
-                                placeholder="タグ (カンマ区切り)"
-                              />
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {item.fixed_tags_str
+                                  .split(",")
+                                  .map((t) => t.trim())
+                                  .filter(Boolean)
+                                  .map((tag, tagIndex) => (
+                                    <Badge
+                                      key={tagIndex}
+                                      variant="secondary"
+                                      className="flex items-center gap-1"
+                                    >
+                                      {tag}
+                                      <button
+                                        onClick={() => {
+                                          const newResults = [
+                                            ...editableResults,
+                                          ];
+                                          const tags = newResults[
+                                            index
+                                          ].fixed_tags_str
+                                            .split(",")
+                                            .map((t) => t.trim())
+                                            .filter(Boolean);
+                                          tags.splice(tagIndex, 1);
+                                          newResults[index].fixed_tags_str =
+                                            tags.join(", ");
+                                          setEditableResults(newResults);
+                                        }}
+                                        className="rounded-full hover:bg-muted-foreground/20"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </Badge>
+                                  ))}
+                              </div>
                             </div>
                             <div className="flex items-center justify-end text-sm">
                               <div className="flex items-center gap-2">
@@ -479,96 +517,92 @@ export default function GeminiTypo({ userId }: Props) {
       )}
 
       {step === "select" && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-500" />
-                Step 1: 修正対象の指定
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="flex justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">
-                        <Checkbox
-                          checked={
-                            posts.length > 0 &&
-                            selectedPostIds.size === posts.length
-                          }
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
-                      <TableHead>current_at</TableHead>
-                      <TableHead>title</TableHead>
-                      <TableHead>content</TableHead>
-                      <TableHead>tags</TableHead>
-                      <TableHead>second</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {posts.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="text-center py-8 text-muted-foreground"
-                        >
-                          データがありません
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      posts.map((post) => (
-                        <TableRow
-                          key={post.id}
-                          data-state={
-                            selectedPostIds.has(post.id) && "selected"
-                          }
-                        >
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedPostIds.has(post.id)}
-                              onCheckedChange={() => handleSelectPost(post.id)}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {post.current_at
-                              ? new Date(post.current_at).toLocaleDateString()
-                              : "-"}
-                          </TableCell>
-                          <TableCell
-                            className="font-medium max-w-[150px] truncate"
-                            title={post.title}
-                          >
-                            {post.title}
-                          </TableCell>
-                          <TableCell className="whitespace-pre-wrap">
-                            {post.content}
-                          </TableCell>
-                          <TableCell>{post.tags?.join(", ")}</TableCell>
-                          <TableCell>{post.second}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-          <div className="flex justify-end">
+        <Card>
+          {/* Step 1: 修正対象の指定 */}
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-500" />
+              Step 1: 修正対象の指定
+            </CardTitle>
+            {/* 送信開始ボタン */}
             <Button
               onClick={handlePrepareForAI}
               disabled={selectedPostIds.size === 0}
             >
               選択した投稿をAIで修正 <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-          </div>
-        </>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={
+                          posts.length > 0 &&
+                          selectedPostIds.size === posts.length
+                        }
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead>current_at</TableHead>
+                    <TableHead>title</TableHead>
+                    <TableHead>content</TableHead>
+                    <TableHead>tags</TableHead>
+                    <TableHead>second</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {posts.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        データがありません
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    posts.map((post) => (
+                      <TableRow
+                        key={post.id}
+                        data-state={selectedPostIds.has(post.id) && "selected"}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedPostIds.has(post.id)}
+                            onCheckedChange={() => handleSelectPost(post.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {post.current_at
+                            ? new Date(post.current_at).toLocaleDateString()
+                            : "-"}
+                        </TableCell>
+                        <TableCell
+                          className="font-medium max-w-[150px] truncate"
+                          title={post.title}
+                        >
+                          {post.title}
+                        </TableCell>
+                        <TableCell className="whitespace-pre-wrap">
+                          {post.content}
+                        </TableCell>
+                        <TableCell>{post.tags?.join(", ")}</TableCell>
+                        <TableCell>{post.second}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

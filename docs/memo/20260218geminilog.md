@@ -16,16 +16,36 @@
 
 ## 2. ログの登録先とテーブル定義案
 
-既存の `Memos`（投稿）テーブルとは別に、**「AI処理のセッション」**と**「個別の実行ログ」**を分けるのがクリーンな設計です。
+既存の `Memos`（投稿）テーブルとは別に、**「AI処理のセッション」**と**「個別の実行ログ」**を分けるのがクリーンな設計です。AIに対するリクエスト自体複数になるので、まとめたai_batchesも利用する。
 
 
+
+### `ai_Batches`
+
+
+
+「1週間分のメモを修正する」という、ユーザーの1回の操作（リクエスト）を管理する親テーブルです。
+
+| カラム名 | 型 | 説明 |
+| --- | --- | --- |
+| `id` | Int | バッチ全体の一意識別子 |
+| `user_id` | UUID | 実行ユーザー |
+| `total_chunks` | Int | 全体の分割数（例：4チャンク） |
+| `completed_chunks` | Int | 完了した数（進捗管理用） |
+| `total_memos` | Int | 処理対象の総メモ件数（例：70件） |
+| `status` | String | `processing`, `completed`, `partial_success`, `failed` |
+| `created_at` | Timestamp | 開始日時 |
+
+SQLiteを想定なので、UUID、JSONB -> TEXT型、Boolean -> Integer(0,1)
 
 ### ai_Execution_Logs
 
 | カラム名 | 型 | 説明 |
 | --- | --- | --- |
-| `id` | UUID / Int | ログの一意識別子 |
+| `id` | Int | ログの一意識別子 |
 | `user_id` | UUID | 実行したユーザー |
+|`batch_id` |int|`ai_Batches` へのリレーション|
+|`chunk_index` |int|「4チャンク中、何番目のリクエストか」を記録します。|
 | `prompt_template` | Text | 使用した `typo_content` のスナップショット |
 | `raw_input_json` | JSONB | AIに送った実際のJSONデータ |
 | `raw_output_text` | Text | AIから返ってきた生のレスポンス |
@@ -34,7 +54,10 @@
 | **`duration_ms`** | Int | 実行にかかった時間（ミリ秒）。パフォーマンス監視用 |
 | `status` | String | `success`, `failed`, `retry` など |
 | `used_tags_snapshot` | JSONB | 当時送ったタグ定義（名前・説明）の記録 |
+| `error_payload` | JSONB |  APIがエラーを返した際、その詳細をそのまま保存します |
+| `token_usage` | JSONB | Geminiから返ってくる `prompt_token_count` と `candidates_token_count` を保存。 |
 | `created_at` | Timestamp | 実行日時 |
+
 
 ---
 
@@ -55,9 +78,11 @@ Google AI Studio (Gemini API) は、`v1beta` でのみ先行実装される機�
 「どの投稿が、どう変わったか」を1件ずつ記録します。
 | カラム名 | 型 | 説明 |
 | :--- | :--- | :--- |
-| `id` | UUID / Int | 履歴の一意識別子 |
+| `id` |  Int | 履歴の一意識別子 |
 | `post_id` | Int | `ZstuPost` のID (FK) |
-| `execution_log_id` | UUID | ①のテーブルへのリンク (FK) |
+| `batch_id` | Int | ai_Batchesのテーブルへのリンク (FK)|
+| `order_index` | Int | AIから帰ってきたときの順序 |
+| `execution_log_id` | int   | ai_Execution_Logsのテーブルへのリンク (FK) |
 | `before_title` | Text | 修正前のタイトル|
 | `before_text` | Text | 修正前の内容 |
 | `before_tags` | JSONB | 修正前のタブ |
@@ -67,10 +92,10 @@ Google AI Studio (Gemini API) は、`v1beta` でのみ先行実装される機�
 | `changes_summary` | JSONB | `changes` 配列（何を変えたか）の保存 |
 | `fixed_title` | Text | 修正後のタイトル |
 | `fixed_text` | Text | 修正後の内容 |
-| `fixed_tags` | JSONB | 修正後のたタブ |
+| `fixed_tags` | JSONB | 修正後のタブ |
 | `is_edited` | Boolean | AIの提案から人間が変更を加えたか |
 | `applied` | Boolean | 元の投稿に反映をしたかどうか |
-| `applied_at` | Timestamp | いつは寧ボタンをおしたか |
+| `applied_at` | Timestamp | いつは反映ボタンをおしたか |
 
 ---
 
@@ -79,6 +104,7 @@ false,true,AIの提案をそのまま採用した。
 true,true,AIの提案を人間が手直しして採用した。
 false,false,AIが提案したが、採用を見送った（破棄）。
 true,false,（レアケース）手直しはしたが、結局採用しなかった。
+
 
 
 ## 3. ログの登録タイミング（実装方法）
@@ -122,7 +148,151 @@ await fetch("/api/logs/ai-execution", {
 
 まずは **①のテーブル（実行ログ）** を作成し、`data.text`（生の結果）をまるごと保存し始めることから着手するのが良いと思います。
 
-次は、これらを実現するための**「バックエンド用API（ログ保存用）」**の作成、または**「差分表示（Diff）用UI」**の構成について具体的にお手伝いしましょうか？
+
+## DDL
+sqlite想定
+```sql
+-- 1. バッチ全体を管理するテーブル
+CREATE TABLE ai_batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL, -- UUIDを想定
+    total_chunks INTEGER DEFAULT 0,
+    completed_chunks INTEGER DEFAULT 0,
+    total_memos INTEGER DEFAULT 0,
+    status TEXT CHECK(status IN ('processing', 'completed', 'partial_success', 'failed')) DEFAULT 'processing',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. APIリクエスト単位のログ
+CREATE TABLE ai_execution_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    prompt_template TEXT,
+    raw_input_json TEXT, -- JSON文字列として保存
+    raw_output_text TEXT,
+    model_info TEXT,
+    api_version TEXT,
+    duration_ms INTEGER,
+    status TEXT, -- 'success', 'failed', 'retry' など
+    used_tags_snapshot TEXT, -- JSON文字列として保存
+    error_payload TEXT,      -- JSON文字列として保存
+    token_usage TEXT,        -- JSON文字列として保存
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. 投稿ごとの変更履歴（評価用）
+CREATE TABLE ai_refinement_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    batch_id INTEGER NOT NULL,
+    execution_log_id INTEGER NOT NULL,
+    order_index INTEGER,
+    before_title TEXT,
+    before_text TEXT,
+    before_tags TEXT, -- JSON形式のテキスト
+    after_title TEXT,
+    after_text TEXT,
+    after_tags TEXT,  -- JSON形式のテキスト
+    changes_summary TEXT, -- JSON形式のテキスト
+    fixed_title TEXT,
+    fixed_text TEXT,
+    fixed_tags TEXT,  -- JSON形式のテキスト
+    is_edited INTEGER DEFAULT 0, -- Booleanの代わり (0: false, 1: true)
+    applied INTEGER DEFAULT 0,   -- Booleanの代わり (0: false, 1: true)
+    applied_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (batch_id) REFERENCES ai_batches(id) ON DELETE CASCADE,
+    FOREIGN KEY (execution_log_id) REFERENCES ai_execution_logs(id) ON DELETE CASCADE
+);
+
+-- インデックスの作成（検索高速化のため）
+CREATE INDEX idx_execution_logs_batch_id ON ai_execution_logs(batch_id);
+CREATE INDEX idx_refinement_history_post_id ON ai_refinement_history(post_id);
+CREATE INDEX idx_refinement_history_batch_id ON ai_refinement_history(batch_id);
+```
+
+
+
+SQLite向けに調整したDDLを作成しました。
+
+SQLiteにはネイティブの `UUID` 型や `JSONB` 型が存在しないため、それぞれ `TEXT` 型として定義し、後からアプリケーション側やSQLiteのJSON関数で扱いやすいように構成しています。また、`Boolean` は `INTEGER` (0 または 1) として扱われます。
+
+---
+
+## SQLite用 DDL定義
+
+```sql
+-- 1. バッチ全体を管理するテーブル
+CREATE TABLE ai_batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL, -- UUIDを想定
+    total_chunks INTEGER DEFAULT 0,
+    completed_chunks INTEGER DEFAULT 0,
+    total_memos INTEGER DEFAULT 0,
+    status TEXT CHECK(status IN ('processing', 'completed', 'partial_success', 'failed')) DEFAULT 'processing',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. APIリクエスト単位のログ
+CREATE TABLE ai_execution_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    prompt_template TEXT,
+    raw_input_json TEXT, -- JSON文字列として保存
+    raw_output_text TEXT,
+    model_info TEXT,
+    api_version TEXT,
+    duration_ms INTEGER,
+    status TEXT, -- 'success', 'failed', 'retry' など
+    used_tags_snapshot TEXT, -- JSON文字列として保存
+    error_payload TEXT,      -- JSON文字列として保存
+    token_usage TEXT,        -- JSON文字列として保存
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (batch_id) REFERENCES ai_batches(id) ON DELETE CASCADE
+);
+
+-- 3. 投稿ごとの変更履歴（評価用）
+CREATE TABLE ai_refinement_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    batch_id INTEGER NOT NULL,
+    execution_log_id INTEGER NOT NULL,
+    order_index INTEGER,
+    before_title TEXT,
+    before_text TEXT,
+    before_tags TEXT, -- JSON形式のテキスト
+    after_title TEXT,
+    after_text TEXT,
+    after_tags TEXT,  -- JSON形式のテキスト
+    changes_summary TEXT, -- JSON形式のテキスト
+    fixed_title TEXT,
+    fixed_text TEXT,
+    fixed_tags TEXT,  -- JSON形式のテキスト
+    is_edited INTEGER DEFAULT 0, -- Booleanの代わり (0: false, 1: true)
+    applied INTEGER DEFAULT 0,   -- Booleanの代わり (0: false, 1: true)
+    applied_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (batch_id) REFERENCES ai_batches(id) ON DELETE CASCADE,
+    FOREIGN KEY (execution_log_id) REFERENCES ai_execution_logs(id) ON DELETE CASCADE
+);
+
+-- インデックスの作成（検索高速化のため）
+CREATE INDEX idx_execution_logs_batch_id ON ai_execution_logs(batch_id);
+CREATE INDEX idx_refinement_history_post_id ON ai_refinement_history(post_id);
+CREATE INDEX idx_refinement_history_batch_id ON ai_refinement_history(batch_id);
+
+```
+
+SQLite 3.38.0 以降であれば、`->` や `json_extract()` 関数を使って、`TEXT` 型で保存した JSON 内の特定の値を直接 SQL で抽出できます。
+
+* 例: `SELECT json_extract(token_usage, '$.prompt_token_count') FROM ai_execution_logs;`
+
+* ちなみに、TursoはSQLite 3.45 
+
 
 
 

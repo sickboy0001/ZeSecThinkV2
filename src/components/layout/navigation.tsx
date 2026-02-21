@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Menu, LogOut, LogIn } from "lucide-react";
+import {
+  Home,
+  Menu,
+  LogOut,
+  LogIn,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +30,9 @@ export function Sidebar() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    {},
+  );
 
   useEffect(() => {
     const getUser = async () => {
@@ -41,6 +51,53 @@ export function Sidebar() {
 
     return () => subscription.unsubscribe();
   }, [supabase]);
+
+  // Group navItems based on "Parent>Child" naming convention
+  const groupedNavItems = useMemo(() => {
+    const groups: any[] = [];
+    const groupMap: Record<string, any> = {};
+
+    navItems.forEach((item) => {
+      if (item.name.includes(">")) {
+        const [groupName, childName] = item.name.split(">");
+        if (!groupMap[groupName]) {
+          const group = {
+            name: groupName,
+            icon: item.icon, // Use the first child's icon for the group
+            isGroup: true,
+            children: [],
+          };
+          groupMap[groupName] = group;
+          groups.push(group);
+        }
+        groupMap[groupName].children.push({
+          ...item,
+          name: childName.trim(),
+        });
+      } else {
+        groups.push(item);
+      }
+    });
+    return groups;
+  }, []);
+
+  // Auto-expand group if a child is active
+  useEffect(() => {
+    groupedNavItems.forEach((item) => {
+      if (item.isGroup) {
+        const hasActiveChild = item.children.some(
+          (child: any) => child.href === pathname,
+        );
+        if (hasActiveChild) {
+          setExpandedGroups((prev) => ({ ...prev, [item.name]: true }));
+        }
+      }
+    });
+  }, [pathname, groupedNavItems]);
+
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
+  };
 
   const isLoggedIn = !!user;
 
@@ -64,7 +121,68 @@ export function Sidebar() {
         </div>
 
         <nav className="space-y-1">
-          {navItems.map((item) => {
+          {groupedNavItems.map((item) => {
+            if (item.isGroup) {
+              const isExpanded = expandedGroups[item.name];
+              const hasActiveChild = item.children.some(
+                (child: any) => child.href === pathname,
+              );
+
+              return (
+                <div key={item.name} className="space-y-1">
+                  <button
+                    onClick={() => toggleGroup(item.name)}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 group",
+                      hasActiveChild
+                        ? "text-foreground font-medium"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon
+                        className={cn(
+                          "w-5 h-5",
+                          hasActiveChild
+                            ? "text-primary"
+                            : "group-hover:scale-110 transition-transform",
+                        )}
+                      />
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="pl-4 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                      {item.children.map((child: any) => {
+                        const isChildActive = pathname === child.href;
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm",
+                              isChildActive
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            )}
+                          >
+                            <child.icon className="w-4 h-4" />
+                            <span>{child.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             const isActive = pathname === item.href;
             return (
               <Link
@@ -135,6 +253,9 @@ export function MobileNav() {
   const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
   const [open, setOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    {},
+  );
 
   useEffect(() => {
     const getUser = async () => {
@@ -153,6 +274,39 @@ export function MobileNav() {
 
     return () => subscription.unsubscribe();
   }, [supabase]);
+
+  // Group navItems based on "Parent>Child" naming convention (Same logic as Sidebar)
+  const groupedNavItems = useMemo(() => {
+    const groups: any[] = [];
+    const groupMap: Record<string, any> = {};
+
+    navItems.forEach((item) => {
+      if (item.name.includes(">")) {
+        const [groupName, childName] = item.name.split(">");
+        if (!groupMap[groupName]) {
+          const group = {
+            name: groupName,
+            icon: item.icon,
+            isGroup: true,
+            children: [],
+          };
+          groupMap[groupName] = group;
+          groups.push(group);
+        }
+        groupMap[groupName].children.push({
+          ...item,
+          name: childName.trim(),
+        });
+      } else {
+        groups.push(item);
+      }
+    });
+    return groups;
+  }, []);
+
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
+  };
 
   const isLoggedIn = !!user;
 
@@ -196,7 +350,64 @@ export function MobileNav() {
             </div>
           </SheetHeader>
           <nav className="space-y-2 flex-1">
-            {navItems.map((item) => {
+            {groupedNavItems.map((item) => {
+              if (item.isGroup) {
+                const isExpanded = expandedGroups[item.name];
+                const hasActiveChild = item.children.some(
+                  (child: any) => child.href === pathname,
+                );
+
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <button
+                      onClick={() => toggleGroup(item.name)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all",
+                        hasActiveChild
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <item.icon className="w-6 h-6" />
+                        <span className="font-bold text-lg">{item.name}</span>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronDown className="w-5 h-5" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5" />
+                      )}
+                    </button>
+
+                    {isExpanded && (
+                      <div className="pl-6 space-y-1">
+                        {item.children.map((child: any) => {
+                          const isChildActive = pathname === child.href;
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={() => setOpen(false)}
+                              className={cn(
+                                "flex items-center gap-4 px-4 py-3 rounded-xl transition-all",
+                                isChildActive
+                                  ? "bg-primary/10 text-primary shadow-sm"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                              )}
+                            >
+                              <child.icon className="w-5 h-5" />
+                              <span className="font-medium text-base">
+                                {child.name}
+                              </span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const isActive = pathname === item.href;
               return (
                 <Link

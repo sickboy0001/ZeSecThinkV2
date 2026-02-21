@@ -2,7 +2,7 @@
 
 import { executeQuery } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import * as AiLogService from "./ai_log_service";
 
 export type SummaryDate = {
   date: string;
@@ -203,3 +203,23 @@ export const updateZstuPost = async (
     throw error;
   }
 };
+
+/**
+ * AIの修正案を元に投稿を更新し、履歴に適用済みフラグを立てる
+ */
+export async function updateZstuPostWithAILog(
+  id: number,
+  batchId: number,
+  params: UpdateZstuPostParams,
+) {
+  // 1. 投稿本体の更新 (既存の関数を再利用)
+  await updateZstuPost(id, params);
+
+  // 2. AI履歴テーブルの更新
+  // params から必要な値を取り出す
+  await AiLogService.applyAiRefinementHistory(id, batchId, {
+    fixed_title: params.title || "",
+    fixed_text: params.content || "",
+    fixed_tags: params.tags || [],
+  });
+}
