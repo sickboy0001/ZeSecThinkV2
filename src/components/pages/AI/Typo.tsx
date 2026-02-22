@@ -9,20 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   getZstuPostsWithDate,
   ZstuPost,
   updateZstuPost,
   updateZstuPostWithAILog,
 } from "@/services/zstuposts_service";
 import { toast } from "sonner";
+import {
+  getAiRefinementHistorys,
+  AiRefinementHistory,
+} from "@/services/ai_log_service";
 import { typo_content } from "@/constants/gai_constants";
 import {
   processGeminiRefinement,
@@ -35,10 +31,10 @@ import {
   Check,
   Sparkles,
   ArrowRight,
-  FileText,
   ClipboardCheck,
   X,
 } from "lucide-react";
+import TypoStep1 from "@/components/molecules/AI/TypoStep1";
 
 interface Props {
   userId: string;
@@ -48,12 +44,14 @@ type Step = "select" | "confirm" | "result";
 
 type EditableRefinementResult = RefinementResult & {
   fixed_tags_str: string;
+  should_update: boolean;
 };
 
 export default function GeminiTypo({ userId }: Props) {
   const [step, setStep] = useState<Step>("select");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [posts, setPosts] = useState<ZstuPost[]>([]);
+  const [aiLogs, setAiLogs] = useState<AiRefinementHistory[]>([]);
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
@@ -102,6 +100,7 @@ export default function GeminiTypo({ userId }: Props) {
       const editable = results.map((item) => ({
         ...item,
         fixed_tags_str: item.fixed_tags?.join(", ") || "",
+        should_update: true,
       }));
       setEditableResults(editable);
 
@@ -145,9 +144,15 @@ export default function GeminiTypo({ userId }: Props) {
       toast.error("バッチ情報が見つかりません。");
       return;
     }
+    const targetItems = editableResults.filter((item) => item.should_update);
+    if (targetItems.length === 0) {
+      toast.warning("更新対象が選択されていません。");
+      return;
+    }
+
     setUpdateLoading(true);
     try {
-      const updates = editableResults.map((item) =>
+      const updates = targetItems.map((item) =>
         updateZstuPostWithAILog(item.id, currentBatchId, {
           title: item.fixed_title,
           content: item.fixed_text,
@@ -205,6 +210,15 @@ export default function GeminiTypo({ userId }: Props) {
 
         const data = await getZstuPostsWithDate(userId, sStr, eStr);
         setPosts(data || []);
+
+        // 2. 投稿がある場合のみ、そのIDリストを使ってAIログを取得
+        if (data && data.length > 0) {
+          const postIds = data.map((p) => p.id);
+          const logsData = await getAiRefinementHistorys(postIds);
+          setAiLogs((logsData as unknown as AiRefinementHistory[]) || []);
+        } else {
+          setAiLogs([]);
+        }
       } catch (error) {
         console.error(error);
         toast.error("データの取得に失敗しました");
@@ -241,12 +255,13 @@ export default function GeminiTypo({ userId }: Props) {
     setSelectedPostIds(newSelectedIds);
   };
 
-  const handleSelectAll = () => {
-    if (selectedPostIds.size === posts.length && posts.length > 0) {
-      setSelectedPostIds(new Set());
-    } else {
-      setSelectedPostIds(new Set(posts.map((post) => post.id)));
-    }
+  const handleBatchSelect = (ids: number[], selected: boolean) => {
+    const newSelectedIds = new Set(selectedPostIds);
+    ids.forEach((id) => {
+      if (selected) newSelectedIds.add(id);
+      else newSelectedIds.delete(id);
+    });
+    setSelectedPostIds(newSelectedIds);
   };
 
   useEffect(() => {
@@ -343,14 +358,62 @@ export default function GeminiTypo({ userId }: Props) {
               </AlertDescription>
             </Alert>
 
+            {editableResults.length > 0 && (
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setEditableResults((prev) =>
+                      prev.map((item) => ({ ...item, should_update: true })),
+                    )
+                  }
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  全て選択
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setEditableResults((prev) =>
+                      prev.map((item) => ({ ...item, should_update: false })),
+                    )
+                  }
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  全て解除
+                </Button>
+              </div>
+            )}
+
             <div className="space-y-4">
               {editableResults.length > 0 ? (
                 editableResults.map((item, index) => (
-                  <Card key={item.id} className="bg-muted/50">
+                  <Card
+                    key={`${item.id}-${index}`}
+                    className={`bg-muted/50 ${!item.should_update ? "opacity-60" : ""}`}
+                  >
                     <CardHeader className="py-3 flex flex-row items-center justify-between space-y-0">
-                      <CardTitle className="text-sm font-medium">
-                        ID: {item.id}
-                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={item.should_update}
+                          onCheckedChange={(c) => {
+                            const newResults = [...editableResults];
+                            newResults[index].should_update = !!c;
+                            setEditableResults(newResults);
+                          }}
+                          id={`update-check-${item.id}`}
+                        />
+                        <CardTitle className="text-sm font-medium">
+                          <label
+                            htmlFor={`update-check-${item.id}`}
+                            className="cursor-pointer"
+                          >
+                            ID: {item.id}
+                          </label>
+                        </CardTitle>
+                      </div>
                       <div className="text-sm text-muted-foreground">
                         {posts.find((p) => p.id === item.id)?.current_at
                           ? new Date(
@@ -504,7 +567,10 @@ export default function GeminiTypo({ userId }: Props) {
               </Button>
               <Button
                 onClick={handleUpdatePosts}
-                disabled={updateLoading || editableResults.length === 0}
+                disabled={
+                  updateLoading ||
+                  editableResults.filter((i) => i.should_update).length === 0
+                }
               >
                 {updateLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -517,92 +583,15 @@ export default function GeminiTypo({ userId }: Props) {
       )}
 
       {step === "select" && (
-        <Card>
-          {/* Step 1: 修正対象の指定 */}
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-500" />
-              Step 1: 修正対象の指定
-            </CardTitle>
-            {/* 送信開始ボタン */}
-            <Button
-              onClick={handlePrepareForAI}
-              disabled={selectedPostIds.size === 0}
-            >
-              選択した投稿をAIで修正 <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={
-                          posts.length > 0 &&
-                          selectedPostIds.size === posts.length
-                        }
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead>current_at</TableHead>
-                    <TableHead>title</TableHead>
-                    <TableHead>content</TableHead>
-                    <TableHead>tags</TableHead>
-                    <TableHead>second</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {posts.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        データがありません
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    posts.map((post) => (
-                      <TableRow
-                        key={post.id}
-                        data-state={selectedPostIds.has(post.id) && "selected"}
-                      >
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedPostIds.has(post.id)}
-                            onCheckedChange={() => handleSelectPost(post.id)}
-                          />
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {post.current_at
-                            ? new Date(post.current_at).toLocaleDateString()
-                            : "-"}
-                        </TableCell>
-                        <TableCell
-                          className="font-medium max-w-[150px] truncate"
-                          title={post.title}
-                        >
-                          {post.title}
-                        </TableCell>
-                        <TableCell className="whitespace-pre-wrap">
-                          {post.content}
-                        </TableCell>
-                        <TableCell>{post.tags?.join(", ")}</TableCell>
-                        <TableCell>{post.second}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+        <TypoStep1
+          posts={posts}
+          loading={loading}
+          selectedPostIds={selectedPostIds}
+          onSelectPost={handleSelectPost}
+          onBatchSelect={handleBatchSelect}
+          onPrepareForAI={handlePrepareForAI}
+          aiLogs={aiLogs}
+        />
       )}
     </div>
   );

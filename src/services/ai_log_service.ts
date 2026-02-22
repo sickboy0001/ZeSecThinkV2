@@ -1,6 +1,28 @@
 "use server";
 import { turso } from "@/lib/turso/turso";
 
+export interface AiRefinementHistory {
+  id: number;
+  post_id: number;
+  batch_id: number;
+  execution_log_id: number;
+  order_index: number;
+  before_title?: string;
+  before_text?: string;
+  before_tags?: string;
+  after_title?: string;
+  after_text?: string;
+  after_tags?: string;
+  changes_summary?: string;
+  is_edited: number; // 0 or 1
+  applied: number; // 0 or 1
+  created_at: string;
+  applied_at?: string;
+  fixed_title?: string;
+  fixed_text?: string;
+  fixed_tags?: string;
+}
+
 /**
  * 安全に値をSQLite（Turso）へ渡すための変換関数
  */
@@ -143,4 +165,91 @@ export async function applyAiRefinementHistory(
       batchId,
     ],
   });
+}
+
+/**
+ * 指定した複数の post_id に対応する修正履歴をすべて取得する
+ */
+export async function getAiRefinementHistorys(postIds: number[]) {
+  // 空配列の場合はクエリを投げずに即座に返す
+  if (postIds.length === 0) return [];
+
+  // 1. IDの数だけプレースホルダ (?, ?, ?, ...) を生成
+  const placeholders = postIds.map(() => "?").join(", ");
+
+  // 2. クエリの実行
+  const result = await turso.execute({
+    sql: `
+      SELECT *
+      FROM ai_refinement_history
+      WHERE post_id IN (${placeholders})
+      ORDER BY created_at DESC
+    `,
+    // postIds の中身をそのまま引数として展開
+    args: postIds,
+  });
+
+  // Server ActionからClient Componentへ渡すため、プレーンオブジェクトに変換
+  return result.rows.map((row) => ({ ...row }));
+}
+/**
+ * 指定期間内に実行されたAI処理バッチの一覧を取得する
+ */
+export async function getAiBatchesByPeriod(
+  userId: string,
+  startDate: string,
+  endDate: string,
+) {
+  const result = await turso.execute({
+    sql: `
+      SELECT 
+        id,
+        created_at,
+        total_chunks,
+        completed_chunks,
+        total_memos,
+        status
+      FROM ai_batches
+      WHERE user_id = ? 
+        AND created_at BETWEEN ? AND ?
+      ORDER BY created_at DESC
+    `,
+    args: [userId, startDate, endDate],
+  });
+
+  return result.rows.map((row) => ({ ...row }));
+}
+
+/**
+ * 指定したバッチIDに紐づくすべてのAI修正履歴を取得する
+ */
+export async function getAiRefinementHistoryByBatch(batchId: number) {
+  const result = await turso.execute({
+    sql: `
+      SELECT 
+        refi.id,
+        refi.post_id,
+        refi.batch_id,
+        refi.order_index,
+        refi.before_title,
+        refi.before_text,
+        refi.before_tags,
+        refi.after_title,
+        refi.after_text,
+        refi.after_tags,
+        refi.changes_summary,
+        refi.fixed_title,
+        refi.fixed_text,
+        refi.fixed_tags,
+        refi.applied,
+        refi.is_edited
+      FROM ai_batches batches
+      INNER JOIN ai_refinement_history refi ON refi.batch_id = batches.id
+      WHERE batches.id = ?
+      ORDER BY refi.order_index ASC
+    `,
+    args: [batchId],
+  });
+
+  return result.rows.map((row) => ({ ...row }));
 }

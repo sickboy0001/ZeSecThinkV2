@@ -24,6 +24,7 @@ import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { logout } from "@/app/(auth)/actions";
 import { navItems } from "@/constants/navigation_constants";
+import { checkIsAdmin } from "@/lib/roleCheck";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -33,6 +34,7 @@ export function Sidebar() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {},
   );
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -40,13 +42,23 @@ export function Sidebar() {
         data: { user },
       } = await supabase.auth.getUser();
       setUser(user);
+      if (user?.email) {
+        const isAdm = await checkIsAdmin(user.email);
+        setIsAdmin(isAdm);
+      }
     };
     getUser();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user?.email) {
+        const isAdm = await checkIsAdmin(session.user.email);
+        setIsAdmin(isAdm);
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -57,7 +69,11 @@ export function Sidebar() {
     const groups: any[] = [];
     const groupMap: Record<string, any> = {};
 
-    navItems.forEach((item) => {
+    const availableNavItems = navItems.filter(
+      (item: any) => !item.adminOnly || isAdmin,
+    );
+
+    availableNavItems.forEach((item) => {
       if (item.name.includes(">")) {
         const [groupName, childName] = item.name.split(">");
         if (!groupMap[groupName]) {
@@ -79,7 +95,7 @@ export function Sidebar() {
       }
     });
     return groups;
-  }, []);
+  }, [user, isAdmin]);
 
   // Auto-expand group if a child is active
   useEffect(() => {
@@ -256,6 +272,7 @@ export function MobileNav() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {},
   );
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -263,13 +280,23 @@ export function MobileNav() {
         data: { user },
       } = await supabase.auth.getUser();
       setUser(user);
+      if (user?.email) {
+        const isAdm = await checkIsAdmin(user.email);
+        setIsAdmin(isAdm);
+      }
     };
     getUser();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user?.email) {
+        const isAdm = await checkIsAdmin(session.user.email);
+        setIsAdmin(isAdm);
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -280,7 +307,11 @@ export function MobileNav() {
     const groups: any[] = [];
     const groupMap: Record<string, any> = {};
 
-    navItems.forEach((item) => {
+    const availableNavItems = navItems.filter(
+      (item: any) => !item.adminOnly || isAdmin,
+    );
+
+    availableNavItems.forEach((item) => {
       if (item.name.includes(">")) {
         const [groupName, childName] = item.name.split(">");
         if (!groupMap[groupName]) {
@@ -302,7 +333,7 @@ export function MobileNav() {
       }
     });
     return groups;
-  }, []);
+  }, [user, isAdmin]);
 
   const toggleGroup = (groupName: string) => {
     setExpandedGroups((prev) => ({ ...prev, [groupName]: !prev[groupName] }));
