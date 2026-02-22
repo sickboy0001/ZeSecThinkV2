@@ -2,9 +2,7 @@ import { ZstuPost } from "@/services/zstuposts_service";
 import { getFormattedTagsJson } from "./zstutags_service";
 // 追加：作成したログサービスをインポート
 import * as AiLogService from "./ai_log_service";
-
-const CHUNK_SIZE = 20;
-const WAIT_TIME_MS = 10000;
+import { CHUNK_SIZE, WAIT_TIME_MS } from "@/constants/gai_constants";
 
 export type RefinementResult = {
   id: number;

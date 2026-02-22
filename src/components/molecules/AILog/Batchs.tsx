@@ -18,6 +18,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { BatchsDetail } from "./BatchsDetail";
 
 interface Props {
   userId: string;
@@ -230,59 +231,10 @@ const Batchs = ({ userId, currentDate }: Props) => {
                   </AccordionTrigger>
                   <AccordionContent className="pt-0 pb-4">
                     <div className="border-t pt-3 mt-1">
-                      {!batchDetails[batch.id] ? (
-                        <div className="flex justify-center p-4">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {batchDetails[batch.id]
-                            .filter((detail) =>
-                              filterText
-                                ? detail.changes_summary
-                                    ?.toLowerCase()
-                                    .includes(filterText.toLowerCase())
-                                : true,
-                            )
-                            .map((detail) => (
-                              <div
-                                key={detail.id}
-                                className="text-xs p-2 border rounded bg-muted/5 flex flex-col gap-1"
-                              >
-                                <div className="flex justify-between font-bold text-gray-700">
-                                  {/* // ポストのタイトルの表示 */}
-                                  <span>
-                                    {detail.after_title || detail.before_title}
-                                  </span>
-                                  <span className="text-[9px] text-muted-foreground">
-                                    ID: {detail.post_id}
-                                  </span>
-                                </div>
-                                <p className="text-gray-700 line-clamp-2 bold">
-                                  {filterText && detail.changes_summary
-                                    ? detail.changes_summary
-                                        .split(
-                                          new RegExp(`(${filterText})`, "gi"),
-                                        )
-                                        .map((part: string, i: number) =>
-                                          part.toLowerCase() ===
-                                          filterText.toLowerCase() ? (
-                                            <span
-                                              key={i}
-                                              className="bg-yellow-200 text-red-600 font-bold"
-                                            >
-                                              {part}
-                                            </span>
-                                          ) : (
-                                            part
-                                          ),
-                                        )
-                                    : detail.changes_summary}
-                                </p>
-                              </div>
-                            ))}
-                        </div>
-                      )}
+                      <BatchsDetail
+                        details={batchDetails[batch.id]}
+                        filterText={filterText}
+                      />
                     </div>
                   </AccordionContent>
                 </AccordionItem>

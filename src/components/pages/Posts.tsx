@@ -16,6 +16,7 @@ import {
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -407,6 +408,21 @@ export default function PostsDayView({ userId }: Props) {
                       </Button>
                     </div>
                   </div>
+
+                  {/* タグ */}
+                  {post.tags && post.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {post.tags.map((tag, i) => (
+                        <Badge
+                          key={i}
+                          variant="secondary"
+                          className="text-xs font-normal text-muted-foreground bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700"
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
 
                   {/* コンテンツ */}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,6 +39,46 @@ export default function TypoStep1({
   aiLogs,
 }: Props) {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+
+  // 日付ごとの集計データを計算
+  const dailyStats = useMemo(() => {
+    const stats: Record<
+      string,
+      { date: Date; counts: Record<string, number>; total: number }
+    > = {};
+
+    posts.forEach((post) => {
+      if (!post.current_at) return;
+      const dateObj = new Date(post.current_at);
+      const dateKey = dateObj.toLocaleDateString();
+
+      if (!stats[dateKey]) {
+        stats[dateKey] = {
+          date: dateObj,
+          counts: { none: 0, pending: 0, edited: 0, applied: 0 },
+          total: 0,
+        };
+      }
+
+      // ステータス判定ロジック（getPostStatusと同様）
+      let status = "none";
+      const relatedLogs = aiLogs.filter((log) => log.post_id === post.id);
+      if (relatedLogs.length > 0) {
+        const latestLog = relatedLogs.sort((a, b) => b.id - a.id)[0];
+        if (!latestLog.applied) status = "pending";
+        else if (latestLog.is_edited) status = "edited";
+        else status = "applied";
+      }
+
+      stats[dateKey].counts[status] = (stats[dateKey].counts[status] || 0) + 1;
+      stats[dateKey].total++;
+    });
+
+    // 日付順にソート
+    return Object.values(stats).sort(
+      (a, b) => a.date.getTime() - b.date.getTime(),
+    );
+  }, [posts, aiLogs]);
 
   const getPostStatus = (postId: number): FilterStatus => {
     const relatedLogs = aiLogs.filter((log) => log.post_id === postId);
@@ -135,6 +175,59 @@ export default function TypoStep1({
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        {/* 日付別集計エリア */}
+        {!loading && dailyStats.length > 0 && (
+          <div className="flex overflow-x-auto p-4 gap-2 border-b bg-muted/5">
+            {dailyStats.map((stat, index) => (
+              <div
+                key={index}
+                className="flex flex-col min-w-[110px] border rounded-md bg-background shadow-sm shrink-0"
+              >
+                <div className="px-2 py-1.5 text-xs font-bold text-center border-b bg-muted/20 flex justify-between items-center">
+                  <span>{stat.date.toLocaleDateString()}</span>
+                  <span className="text-muted-foreground font-normal bg-background px-1 rounded border">
+                    {stat.total}
+                  </span>
+                </div>
+                <div className="p-2 flex flex-col gap-1 justify-center flex-1">
+                  {stat.counts.pending > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 h-5 w-full justify-center bg-red-50 text-red-700 border-red-200"
+                    >
+                      未反映: {stat.counts.pending}
+                    </Badge>
+                  )}
+                  {stat.counts.edited > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 h-5 w-full justify-center bg-green-50 text-green-700 border-green-200"
+                    >
+                      調整済: {stat.counts.edited}
+                    </Badge>
+                  )}
+                  {stat.counts.applied > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 h-5 w-full justify-center bg-blue-50 text-blue-700 border-blue-200"
+                    >
+                      反映済: {stat.counts.applied}
+                    </Badge>
+                  )}
+                  {stat.counts.none > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 h-5 w-full justify-center text-muted-foreground border-muted"
+                    >
+                      未実施: {stat.counts.none}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />

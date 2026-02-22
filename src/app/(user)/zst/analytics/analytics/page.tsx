@@ -12,5 +12,5 @@ export default async function Page() {
 
   if (!user) redirect("/login");
 
-  return <Analytics />;
+  return <Analytics userId={user.id} />;
 }

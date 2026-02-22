@@ -41,6 +41,7 @@ export function PostsRegistDialog({
 }: Props) {
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostTitle, setNewPostTitle] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
 
@@ -53,11 +54,13 @@ export function PostsRegistDialog({
       }, 1000);
 
       if (post) {
-        setNewPostTitle(post.tags && post.tags.length > 0 ? post.tags[0] : "");
+        setNewPostTitle(post.title || "");
         setNewPostContent(post.content || "");
+        setTagsInput(post.tags?.join(", ") || "");
       } else {
         setNewPostTitle("");
         setNewPostContent("");
+        setTagsInput("");
       }
     }
     return () => {
@@ -77,11 +80,16 @@ export function PostsRegistDialog({
 
     setIsSubmitting(true);
     try {
+      const tags = tagsInput
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
       if (post) {
         await updateZstuPost(post.id, {
           title: newPostTitle.trim(),
           content: newPostContent,
-          tags: [newPostTitle.trim()],
+          tags: tags,
           second: (post.second || 0) + elapsedTime,
         });
         toast.success("投稿を更新しました");
@@ -89,7 +97,7 @@ export function PostsRegistDialog({
         await createZstuPost(userId, {
           title: newPostTitle.trim(),
           content: newPostContent,
-          tags: [newPostTitle.trim()],
+          tags: tags,
           second: elapsedTime,
           current_at: currentDate,
         });
@@ -98,6 +106,7 @@ export function PostsRegistDialog({
 
       setNewPostContent("");
       setNewPostTitle("");
+      setTagsInput("");
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -135,7 +144,7 @@ export function PostsRegistDialog({
             </p>
           )}
         </DialogHeader>
-        <div className="grid gap-2 py-0.5">
+        <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="title">タイトル</Label>
             <Input
@@ -144,6 +153,15 @@ export function PostsRegistDialog({
               onChange={(e) => setNewPostTitle(e.target.value)}
               placeholder="タイトル"
               className="text-lg!"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="tags">タグ</Label>
+            <Input
+              id="tags"
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              placeholder="カンマ区切りで入力 (例: xx,yy,zzz)"
             />
           </div>
           <div className="grid gap-2">

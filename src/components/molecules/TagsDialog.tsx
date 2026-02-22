@@ -1,7 +1,7 @@
 // src/components/molecules/TagsDialog.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,15 +29,30 @@ export function TagsDialog({
   onCreate,
   isCreating,
 }: TagsDialogProps) {
-  const [newTag, setNewTag] = useState<Partial<Tag>>({
+  const [newTag, setNewTag] = useState<Omit<Partial<Tag>, "aliases">>({
     tag_name: "",
     name: "",
-    aliases: [],
     description: "",
     display_order: 0,
     is_active: true,
     is_send_ai: false,
   });
+  const [aliasesInput, setAliasesInput] = useState("");
+
+  // ダイアログが閉じたときにステートをリセットする
+  useEffect(() => {
+    if (!isOpen) {
+      setNewTag({
+        tag_name: "",
+        name: "",
+        description: "",
+        display_order: 0,
+        is_active: true,
+        is_send_ai: false,
+      });
+      setAliasesInput("");
+    }
+  }, [isOpen]);
 
   const handleSubmit = async () => {
     if (!newTag.tag_name) {
@@ -45,18 +60,12 @@ export function TagsDialog({
       return;
     }
 
-    await onCreate(newTag);
+    const aliases = aliasesInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
-    // 成功したらフォームをリセット
-    setNewTag({
-      tag_name: "",
-      name: "",
-      aliases: [],
-      description: "",
-      display_order: 0,
-      is_active: true,
-      is_send_ai: false,
-    });
+    await onCreate({ ...newTag, aliases });
   };
 
   return (
@@ -72,7 +81,7 @@ export function TagsDialog({
             </Label>
             <Input
               id="tag_name"
-              value={newTag.tag_name}
+              value={newTag.tag_name || ""}
               onChange={(e) =>
                 setNewTag({ ...newTag, tag_name: e.target.value })
               }
@@ -85,27 +94,20 @@ export function TagsDialog({
             </Label>
             <Input
               id="name"
-              value={newTag.name}
+              value={newTag.name || ""}
               onChange={(e) => setNewTag({ ...newTag, name: e.target.value })}
               className="col-span-3"
             />
           </div>
+          {/* aliases */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="aliases" className="text-right">
               Aliases
             </Label>
             <Input
               id="aliases"
-              value={newTag.aliases?.join(", ")}
-              onChange={(e) =>
-                setNewTag({
-                  ...newTag,
-                  aliases: e.target.value
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                })
-              }
+              value={aliasesInput}
+              onChange={(e) => setAliasesInput(e.target.value)}
               placeholder="カンマ区切り"
               className="col-span-3"
             />
@@ -116,7 +118,7 @@ export function TagsDialog({
             </Label>
             <Input
               id="description"
-              value={newTag.description}
+              value={newTag.description || ""}
               onChange={(e) =>
                 setNewTag({ ...newTag, description: e.target.value })
               }

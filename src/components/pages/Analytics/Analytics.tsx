@@ -1,154 +1,275 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, Calendar, Filter, TrendingUp } from "lucide-react";
+import { BrainCircuit, Calendar, Hash, Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner"; // またはお使いのtoastライブラリ
+import { getZstuPostsWithDate, ZstuPost } from "@/services/zstuposts_service";
+import { AnalyticsTagMoment } from "@/components/molecules/Analytics/AnalyticsTagMoment";
+import { AnalyticsTagHeatmap } from "@/components/molecules/Analytics/AnalyticsTagHeatMap";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-export default function Analytics() {
-    const [period, setPeriod] = useState("weekly");
+interface Props {
+  userId: string;
+}
+export default function Analytics({ userId }: Props) {
+  const [posts, setPosts] = useState<ZstuPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState({
+    start: new Date(new Date().setDate(new Date().getDate() - 89)), // 90日間
+    end: new Date(),
+  });
+  const [rangeValue, setRangeValue] = useState("3m");
 
-    // Mock data for heatmap
-    const days = Array.from({ length: 35 }, (_, i) => ({
-        day: i + 1,
-        level: Math.floor(Math.random() * 5), // 0 to 4
-    }));
+  const handleRangeChange = (val: string) => {
+    setRangeValue(val);
+    const end = new Date();
+    const start = new Date();
 
-    // Mock data for bar chart
-    const weeklyData = [
-        { label: "Mon", value: 65 },
-        { label: "Tue", value: 45 },
-        { label: "Wed", value: 85 },
-        { label: "Thu", value: 30 },
-        { label: "Fri", value: 70 },
-        { label: "Sat", value: 90 },
-        { label: "Sun", value: 55 },
-    ];
+    switch (val) {
+      case "1w":
+        start.setDate(end.getDate() - 6);
+        break;
+      case "1m":
+        start.setMonth(end.getMonth() - 1);
+        break;
+      case "3m":
+        start.setMonth(end.getMonth() - 3);
+        break;
+      case "6m":
+        start.setMonth(end.getMonth() - 6);
+        break;
+      case "1y":
+        start.setFullYear(end.getFullYear() - 1);
+        break;
+    }
+    setRange({ start, end });
+  };
 
-    return (
-        <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">統計分析</h1>
-                    <p className="text-muted-foreground mt-1">あなたの成長をデータで可視化します。</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Select defaultValue="all">
-                        <SelectTrigger className="w-[180px] bg-card/50">
-                            <Filter className="h-4 w-4 mr-2" />
-                            <SelectValue placeholder="全カテゴリ" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">全カテゴリ</SelectItem>
-                            <SelectItem value="1">運動</SelectItem>
-                            <SelectItem value="2">学習</SelectItem>
-                            <SelectItem value="3">余暇</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Tabs defaultValue={period} onValueChange={setPeriod}>
-                        <TabsList className="bg-muted/50">
-                            <TabsTrigger value="weekly">週</TabsTrigger>
-                            <TabsTrigger value="monthly">月</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </div>
-            </header>
+  // 1. データ取得ロジック
+  useEffect(() => {
+    // userId が存在しない、または 'undefined' という文字列の場合は実行しない
+    if (!userId || userId === "undefined") return;
 
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card className="border-none shadow-lg bg-card/50 backdrop-blur-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5 text-primary" />
-                            アクティビティ
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-wrap gap-2 justify-center py-4">
-                            {days.map((d, i) => (
-                                <div
-                                    key={i}
-                                    className={`w-4 h-4 rounded-sm transition-all hover:scale-125 cursor-pointer ${d.level === 0 ? "bg-muted" :
-                                        d.level === 1 ? "bg-primary/20" :
-                                            d.level === 2 ? "bg-primary/40" :
-                                                d.level === 3 ? "bg-primary/70" :
-                                                    "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]"
-                                        }`}
-                                    title={`${d.level} 実績`}
-                                />
-                            ))}
-                        </div>
-                        <div className="flex items-center justify-end gap-1 mt-4 text-[10px] text-muted-foreground">
-                            <span>Less</span>
-                            <div className="w-2 h-2 bg-muted rounded-sm" />
-                            <div className="w-2 h-2 bg-primary/20 rounded-sm" />
-                            <div className="w-2 h-2 bg-primary/40 rounded-sm" />
-                            <div className="w-2 h-2 bg-primary/70 rounded-sm" />
-                            <div className="w-2 h-2 bg-primary rounded-sm" />
-                            <span>More</span>
-                        </div>
-                    </CardContent>
-                </Card>
+    const fetchPosts = async () => {
+      setLoading(true);
+      try {
+        const formatDate = (d: Date) => d.toISOString().split("T")[0];
+        // getZstuPostsWithDate は外部からインポートされている想定
+        const data = await getZstuPostsWithDate(
+          userId,
+          formatDate(range.start),
+          formatDate(range.end),
+        );
+        setPosts(data || []);
+      } catch (error) {
+        toast.error("データの取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPosts();
+  }, [userId, range]);
+  // 2. データ集計ロジック (時系列分析対応)
+  const stats = useMemo(() => {
+    if (posts.length === 0) return null;
 
-                <Card className="border-none shadow-lg bg-card/50 backdrop-blur-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5 text-primary" />
-                            実施トレンド
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-48 flex items-end justify-between gap-2 pt-4 px-2">
-                            {weeklyData.map((d, i) => (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                                    <div
-                                        className="w-full bg-primary/20 group-hover:bg-primary/40 transition-all rounded-t-md relative flex items-end"
-                                        style={{ height: `${d.value}%` }}
-                                    >
-                                        <div
-                                            className="absolute bottom-0 w-full bg-primary rounded-t-md shadow-lg transition-transform origin-bottom"
-                                            style={{ height: `${d.value * 0.8}%` }}
-                                        />
-                                    </div>
-                                    <span className="text-xs text-muted-foreground">{d.label}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+    const tagMap: Record<string, number> = {};
+    const dateMap: Record<string, number> = {};
+    const tagDateMap: Record<string, Record<string, number>> = {};
+    const weeklyTagStats: Record<string, Record<string, number>> = {};
 
-            <Card className="border-none shadow-lg bg-card/50 backdrop-blur-sm">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <BarChart3 className="h-5 w-5 text-primary" />
-                        項目別ランキング
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {[
-                            { name: "階段利用", count: 42, color: "bg-primary" },
-                            { name: "Schoo", count: 28, color: "bg-primary/70" },
-                            { name: "スクワット", count: 15, color: "bg-primary/40" },
-                            { name: "ランニング", count: 12, color: "bg-primary/20" },
-                        ].map((item, i) => (
-                            <div key={i} className="space-y-1">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="font-medium">{item.name}</span>
-                                    <span className="font-mono text-muted-foreground">{item.count} times</span>
-                                </div>
-                                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                                    <div
-                                        className={`${item.color} h-full rounded-full transition-all duration-1000 shadow-sm`}
-                                        style={{ width: `${(item.count / 45) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+    posts.forEach((post) => {
+      // タイムゾーンの影響を避けるため current_at を調整
+      const d = new Date(post.current_at);
+      const dateStr = d.toISOString().split("T")[0];
+
+      // 週のキー（日曜日の日付）を算出
+      const day = d.getDay();
+      const sun = new Date(d);
+      sun.setDate(d.getDate() - day);
+      const weekKey = sun.toISOString().split("T")[0];
+
+      // 全体タグ集計
+      post.tags?.forEach((tag) => {
+        tagMap[tag] = (tagMap[tag] || 0) + 1;
+        if (!weeklyTagStats[weekKey]) weeklyTagStats[weekKey] = {};
+        weeklyTagStats[weekKey][tag] = (weeklyTagStats[weekKey][tag] || 0) + 1;
+
+        // タグ別日別集計
+        if (!tagDateMap[tag]) tagDateMap[tag] = {};
+        tagDateMap[tag][dateStr] = (tagDateMap[tag][dateStr] || 0) + 1;
+      });
+
+      dateMap[dateStr] = (dateMap[dateStr] || 0) + 1;
+    });
+
+    const sortedTags = Object.entries(tagMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // 【重要】時系列順に並べるために weekKeys をソート
+    const momentumData = Object.keys(weeklyTagStats)
+      .sort() // 日付順にソート
+      .map((weekKey) => {
+        const weekData: any = { label: weekKey.substring(5) }; // "MM-DD"
+        sortedTags.forEach((tag) => {
+          weekData[tag.name] = weeklyTagStats[weekKey][tag.name] || 0;
+        });
+        return weekData;
+      });
+
+    // 最大値を取得（高さ計算用）
+    const maxVal = Math.max(
+      ...momentumData.map((w) =>
+        sortedTags.reduce((acc, tag) => acc + (w[tag.name] || 0), 0),
+      ),
+      1,
     );
+
+    return {
+      sortedTags,
+      dateMap,
+      tagDateMap,
+      totalCount: posts.length,
+      momentumData,
+      maxVal,
+    };
+  }, [posts]);
+
+  const daysInRange = useMemo(() => {
+    return (
+      Math.round(
+        (range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24),
+      ) + 1
+    );
+  }, [range]);
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto p-4 space-y-6 animate-in fade-in duration-700">
+      {/* HEADER */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b pb-6">
+        <div>
+          <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Analytics
+          </h1>
+          <p className="text-muted-foreground mt-2 flex items-center gap-2 text-sm">
+            <BrainCircuit className="h-4 w-4" />
+            {range.start.toLocaleDateString()} 〜{" "}
+            {range.end.toLocaleDateString()} の分析
+            <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-bold">
+              Total: {stats?.totalCount || 0} posts
+            </span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={rangeValue} onValueChange={handleRangeChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="期間を選択" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1w">過去 1週間</SelectItem>
+              <SelectItem value="1m">過去 1ヶ月</SelectItem>
+              <SelectItem value="3m">過去 3ヶ月</SelectItem>
+              <SelectItem value="6m">過去 6ヶ月</SelectItem>
+              <SelectItem value="1y">過去 1年</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </header>
+
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* 1. タグ・モメンタム */}
+        {stats && (
+          <AnalyticsTagMoment
+            momentumData={stats.momentumData}
+            sortedTags={stats.sortedTags}
+            maxVal={stats.maxVal}
+          />
+        )}
+
+        {/* 2. AI インサイト */}
+        <Card className="shadow-md border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-yellow-500" />
+              AI Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            <div className="p-3 rounded-lg bg-background/50 border border-primary/10">
+              <p className="font-bold text-primary mb-1">最多活動タグ</p>
+              最も多く記録されたのは{" "}
+              <span className="underline">
+                #{stats?.sortedTags[0]?.name}
+              </span>{" "}
+              です。このテーマに関する思考が深まっています。
+            </div>
+            <div className="p-3 rounded-lg bg-background/50 border border-primary/10">
+              <p className="font-bold text-primary mb-1">集中の兆候</p>
+              1日平均 {((stats?.totalCount || 0) / daysInRange).toFixed(1)}{" "}
+              件のメモ。継続的なアウトプットが維持されています。
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 3. 活動密度ヒートマップ (postsから動的に生成) */}
+      {stats && (
+        <AnalyticsTagHeatmap
+          range={range}
+          items={[
+            { label: "思考密度 (全体)", dateMap: stats.dateMap },
+            ...stats.sortedTags.map((tag) => ({
+              label: `#${tag.name}`,
+              dateMap: stats.tagDateMap[tag.name] || {},
+            })),
+          ]}
+        />
+      )}
+
+      {/* 4. タグ詳細ランキング */}
+      <Card className="shadow-md border-muted/40">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Hash className="h-5 w-5 text-orange-500" />
+            タグ・ランキング（Top 5）
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {stats?.sortedTags.map((tag) => (
+            <div key={tag.name}>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-semibold">#{tag.name}</span>
+                <span className="text-muted-foreground">{tag.count} posts</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-orange-500 h-full transition-all duration-1000"
+                  style={{
+                    width: `${(tag.count / stats.sortedTags[0].count) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

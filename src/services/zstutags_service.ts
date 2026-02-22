@@ -2,6 +2,7 @@
 
 import { executeQuery } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/server";
+import { TAG_COUNT_LIMIT } from "@/constants/gai_constants";
 
 export interface Tag {
   id: number;
@@ -109,14 +110,13 @@ export async function updateZstuTagsOrder(
 }
 
 export async function getFormattedTagsJson(userId: string) {
-  const tagCountLimit = 20;
   const tags = await getZstuTags(userId);
   return JSON.stringify(
     {
       request_taglist: (tags || [])
         .filter((t) => t.is_active && t.is_send_ai)
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-        .slice(0, tagCountLimit)
+        .slice(0, TAG_COUNT_LIMIT)
         .map((t) => ({
           name: t.name,
           tag_name: t.tag_name,

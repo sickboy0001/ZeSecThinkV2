@@ -581,7 +581,7 @@ export default function GeminiTypo({ userId }: Props) {
           </CardContent>
         </Card>
       )}
-
+      {/* // Step1 */}
       {step === "select" && (
         <TypoStep1
           posts={posts}
