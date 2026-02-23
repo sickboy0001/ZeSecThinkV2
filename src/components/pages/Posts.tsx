@@ -291,7 +291,7 @@ export default function PostsDayView({ userId }: Props) {
             {formatDate(currentDate)}
           </h2>
           <span className="text-muted-foreground font-semibold text-base">
-            [{posts.length}]
+            [{posts.length}] [{posts.length}/10]
           </span>
         </div>
 

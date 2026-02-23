@@ -8,11 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Tags } from "lucide-react";
 import { toast } from "sonner";
 import {
   ZstuPost,
@@ -44,6 +43,7 @@ export function PostsRegistDialog({
   const [tagsInput, setTagsInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [isTagsVisible, setIsTagsVisible] = useState(false);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -56,11 +56,16 @@ export function PostsRegistDialog({
       if (post) {
         setNewPostTitle(post.title || "");
         setNewPostContent(post.content || "");
-        setTagsInput(post.tags?.join(", ") || "");
+        const postTags = post.tags?.join(", ") || "";
+        setTagsInput(postTags);
+        // 既存のタグがあれば、タグ入力欄を最初から表示する
+        setIsTagsVisible(!!postTags);
       } else {
         setNewPostTitle("");
         setNewPostContent("");
         setTagsInput("");
+        // 新規作成時はタグ入力欄を非表示にする
+        setIsTagsVisible(false);
       }
     }
     return () => {
@@ -134,7 +139,7 @@ export function PostsRegistDialog({
             </span>
             {postCount !== 0 && (
               <span className="text-sm font-normal text-muted-foreground ml-2">
-                [{postCount}]
+                [{postCount}/10]
               </span>
             )}
           </DialogTitle>
@@ -145,35 +150,39 @@ export function PostsRegistDialog({
           )}
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="title">タイトル</Label>
+          <div className="flex items-center gap-2">
             <Input
               id="title"
               value={newPostTitle}
               onChange={(e) => setNewPostTitle(e.target.value)}
               placeholder="タイトル"
-              className="text-lg!"
+              className="flex-grow text-lg!"
             />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsTagsVisible(!isTagsVisible)}
+              className="shrink-0"
+            >
+              <Tags className="h-4 w-4" />
+            </Button>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="tags">タグ</Label>
+          {isTagsVisible && (
             <Input
               id="tags"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="カンマ区切りで入力 (例: xx,yy,zzz)"
+              placeholder="タグ (カンマ区切りで入力 例: xx,yy,zzz)"
+              className="animate-in fade-in-0 zoom-in-95"
             />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="content">内容</Label>
-            <Textarea
-              id="content"
-              value={newPostContent}
-              onChange={(e) => setNewPostContent(e.target.value)}
-              placeholder="内容"
-              className="h-40 resize-none text-lg"
-            />
-          </div>
+          )}
+          <Textarea
+            id="content"
+            value={newPostContent}
+            onChange={(e) => setNewPostContent(e.target.value)}
+            placeholder="内容"
+            className="h-40 resize-none text-lg"
+          />
         </div>
         <DialogFooter>
           <Button
