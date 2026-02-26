@@ -25,13 +25,13 @@ export default function RootLayout({
         <div className="flex min-h-screen">
           <Sidebar />
           <div className="flex flex-col flex-1">
-            <main className="flex-1 p-1 md:p-8 pb-24 md:pb-8 w-full mx-auto w-full">
+            <main className="flex-1 px-4 pt-16 md:p-8 pb-24 md:pb-8 w-full mx-auto">
               {children}
             </main>
             <AppFooter />
           </div>
-          <MobileNav />
         </div>
+        <MobileNav />
         <Toaster position="top-center" />
       </body>
     </html>

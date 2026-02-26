@@ -262,7 +262,6 @@ export function Sidebar() {
     </aside>
   );
 }
-
 export function MobileNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -302,11 +301,9 @@ export function MobileNav() {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  // Group navItems based on "Parent>Child" naming convention (Same logic as Sidebar)
   const groupedNavItems = useMemo(() => {
     const groups: any[] = [];
     const groupMap: Record<string, any> = {};
-
     const availableNavItems = navItems.filter(
       (item: any) => !item.adminOnly || isAdmin,
     );
@@ -324,10 +321,7 @@ export function MobileNav() {
           groupMap[groupName] = group;
           groups.push(group);
         }
-        groupMap[groupName].children.push({
-          ...item,
-          name: childName.trim(),
-        });
+        groupMap[groupName].children.push({ ...item, name: childName.trim() });
       } else {
         groups.push(item);
       }
@@ -341,31 +335,31 @@ export function MobileNav() {
 
   const isLoggedIn = !!user;
 
-  // スタートページや認証ページではモバイルナビを表示しない
   if (["/", "/startPage", "/login", "/signup"].includes(pathname)) {
     return null;
   }
 
   return (
-    <div className="md:hidden fixed bottom-6 left-6 z-50">
+    <div className="md:hidden fixed top-4 left-4 z-[100]">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button
             size="icon"
-            className="h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-transform active:scale-95"
+            variant="ghost"
+            className="h-10 w-10 rounded-md border bg-background/80 backdrop-blur-sm shadow-sm hover:bg-muted transition-all active:scale-95"
           >
-            <Menu className="h-7 w-7" />
+            <Menu className="h-6 w-6 text-foreground" />
           </Button>
         </SheetTrigger>
         <SheetContent
           side="left"
-          className="w-[280px] bg-card/95 backdrop-blur-xl border-r flex flex-col"
+          className="w-[280px] bg-card/95 backdrop-blur-xl border-r flex flex-col h-full"
         >
-          <SheetHeader className="text-left mb-8">
+          <SheetHeader className="text-left mb-6">
             <div className="flex items-center gap-2 px-2">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold italic">
-                  H
+                  Z
                 </span>
               </div>
               <div>
@@ -380,89 +374,87 @@ export function MobileNav() {
               </div>
             </div>
           </SheetHeader>
-          <nav className="space-y-2 flex-1">
-            {groupedNavItems.map((item) => {
-              if (item.isGroup) {
-                const isExpanded = expandedGroups[item.name];
-                const hasActiveChild = item.children.some(
-                  (child: any) => child.href === pathname,
-                );
 
-                return (
-                  <div key={item.name} className="space-y-1">
-                    <button
-                      onClick={() => toggleGroup(item.name)}
-                      className={cn(
-                        "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all",
-                        hasActiveChild
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                      )}
-                    >
-                      <div className="flex items-center gap-4">
-                        <item.icon className="w-6 h-6" />
-                        <span className="font-bold text-lg">{item.name}</span>
-                      </div>
-                      {isExpanded ? (
-                        <ChevronDown className="w-5 h-5" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5" />
-                      )}
-                    </button>
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-hide">
+            <nav className="space-y-2 pb-4">
+              {groupedNavItems.map((item) => {
+                if (item.isGroup) {
+                  const isExpanded = expandedGroups[item.name];
+                  const hasActiveChild = item.children.some(
+                    (child: any) => child.href === pathname,
+                  );
 
-                    {isExpanded && (
-                      <div className="pl-6 space-y-1">
-                        {item.children.map((child: any) => {
-                          const isChildActive = pathname === child.href;
-                          return (
+                  return (
+                    <div key={item.name} className="space-y-1">
+                      <button
+                        onClick={() => toggleGroup(item.name)}
+                        className={cn(
+                          "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all",
+                          hasActiveChild
+                            ? "text-foreground font-medium"
+                            : "text-muted-foreground hover:bg-muted",
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <item.icon className="w-5 h-5" />
+                          <span className="font-medium">{item.name}</span>
+                        </div>
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="pl-4 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                          {item.children.map((child: any) => (
                             <Link
                               key={child.href}
                               href={child.href}
                               onClick={() => setOpen(false)}
                               className={cn(
-                                "flex items-center gap-4 px-4 py-3 rounded-xl transition-all",
-                                isChildActive
-                                  ? "bg-primary/10 text-primary shadow-sm"
-                                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all",
+                                pathname === child.href
+                                  ? "bg-primary/10 text-primary font-medium"
+                                  : "text-muted-foreground hover:bg-muted",
                               )}
                             >
-                              <child.icon className="w-5 h-5" />
-                              <span className="font-medium text-base">
-                                {child.name}
-                              </span>
+                              <child.icon className="w-4 h-4" />
+                              <span>{child.name}</span>
                             </Link>
-                          );
-                        })}
-                      </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg transition-all",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-muted-foreground hover:bg-muted",
                     )}
-                  </div>
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="font-medium">{item.name}</span>
+                  </Link>
                 );
-              }
+              })}
+            </nav>
+          </div>
 
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "flex items-center gap-4 px-4 py-3 rounded-xl transition-all",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <item.icon className={cn("w-6 h-6", isActive ? "" : "")} />
-                  <span className="font-bold text-lg">{item.name}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="pt-4 border-t border-border/50">
+          <div className="pt-4 mt-auto border-t border-border/50">
             <Button
               variant="ghost"
-              className="w-full justify-start gap-4 h-12 text-muted-foreground hover:text-foreground hover:bg-muted"
+              className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
               onClick={async () => {
                 setOpen(false);
                 if (isLoggedIn) {
@@ -474,13 +466,13 @@ export function MobileNav() {
             >
               {isLoggedIn ? (
                 <>
-                  <LogOut className="h-6 w-6" />
-                  <span className="font-bold text-lg">ログアウト</span>
+                  <LogOut className="h-5 w-5" />
+                  <span>ログアウト</span>
                 </>
               ) : (
                 <>
-                  <LogIn className="h-6 w-6" />
-                  <span className="font-bold text-lg">ログイン</span>
+                  <LogIn className="h-5 w-5" />
+                  <span>ログイン</span>
                 </>
               )}
             </Button>

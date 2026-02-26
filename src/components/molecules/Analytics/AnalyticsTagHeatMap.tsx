@@ -41,10 +41,13 @@ export function AnalyticsTagHeatmap({ items, range }: Props) {
       range.start.getDate(),
     ),
   );
-
   return (
-    <Card className="shadow-md border-muted/40">
-      <CardHeader className="pb-3">
+    <Card className="shadow-md border-muted/40 w-full overflow-hidden">
+      {" "}
+      {/* overflow-hiddenを追加 */}
+      <CardHeader className="pb-3 px-4 sm:px-6">
+        {" "}
+        {/* パディングをスマホで少し詰める */}
         <CardTitle className="text-lg flex items-center gap-2">
           <Calendar className="h-4 w-4 text-green-500" />
           活動密度ヒートマップ
@@ -54,16 +57,19 @@ export function AnalyticsTagHeatmap({ items, range }: Props) {
       <CardContent
         className={
           days === 7
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-            : "grid grid-cols-1 gap-6"
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 px-4 sm:px-6" // gapとpxを調整
+            : "grid grid-cols-1 gap-6 px-4 sm:px-6"
         }
       >
         {items.map((item, index) => (
-          <div key={index}>
-            <div className="mb-2 text-sm font-medium text-muted-foreground">
+          <div key={index} className="w-full">
+            <div className="mb-2 text-sm font-medium text-muted-foreground truncate">
               {item.label}
             </div>
-            <div className="flex flex-wrap gap-1">
+            {/* flex-wrapの挙動を安定させ、
+               ドットのサイズをスマホ(w-2.5)とPC(sm:w-3)で微調整 
+            */}
+            <div className="flex flex-wrap gap-1 max-w-full">
               {Array.from({ length: days }).map((_, i) => {
                 const d = new Date(startUTC);
                 d.setUTCDate(d.getUTCDate() + i);
@@ -74,12 +80,10 @@ export function AnalyticsTagHeatmap({ items, range }: Props) {
                 let colorClass = "bg-muted";
                 if (count > 0) {
                   if (isTag) {
-                    // タグは青ベース
                     if (count < 2) colorClass = "bg-blue-700/30";
                     else if (count < 5) colorClass = "bg-blue-500/60";
                     else colorClass = "bg-blue-400";
                   } else {
-                    // 全体は緑ベース
                     if (count < 2) colorClass = "bg-green-700/30";
                     else if (count < 5) colorClass = "bg-green-500/60";
                     else colorClass = "bg-green-400";
@@ -89,7 +93,8 @@ export function AnalyticsTagHeatmap({ items, range }: Props) {
                 return (
                   <div
                     key={i}
-                    className={`w-3 h-3 rounded-[1px] ${colorClass}`}
+                    // w-3 h-3 から w-2.5 h-2.5 (sm以上でw-3) に変更
+                    className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-[1px] shrink-0 ${colorClass}`}
                     title={`${dateStr}: ${count} posts`}
                   />
                 );

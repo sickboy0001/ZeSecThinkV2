@@ -204,7 +204,7 @@ export default function Analytics({ userId }: Props) {
         )}
 
         {/* 2. AI インサイト */}
-        <Card className="shadow-md border-primary/20 bg-primary/5">
+        {/* <Card className="shadow-md border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-yellow-500" />
@@ -226,7 +226,7 @@ export default function Analytics({ userId }: Props) {
               件のメモ。継続的なアウトプットが維持されています。
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* 3. 活動密度ヒートマップ (postsから動的に生成) */}

@@ -135,7 +135,7 @@ export default async function Page() {
 ```
 
 
-## テーブル定義: `zstu_posts` (最終構成)
+## `zstu_posts` 
 
 
 | カラム物理名 | 論理名 | データ型 | 必須 | デフォルト / 制約 | 備考 |
@@ -157,6 +157,32 @@ export default async function Page() {
 | **write_end_at** | 執筆終了日時 | `timestamp` | - | `CURRENT_TIMESTAMP` |  |
 | **created_at** | 作成日時 | `timestamp` | ◯ | `CURRENT_TIMESTAMP` | レコード作成日 |
 | **updated_at** | 更新日時 | `timestamp` | ◯ | `CURRENT_TIMESTAMP` | レコード更新日 |
+| **state_detail** | 状態の詳細 | **`jsonb`** | - |  | AI連携の詳細 |
+
+### zstu_posts:state_details
+
+AIへの要求などの最終的な状態
+
+|日本語の状態|推奨する英語定数 (Status)|説明・補足|
+|:----|:----|:----|
+|なし|unprocessed|まだ何もしていない初期状態。|
+|再要求|pending_requeue|ユーザーが「やり直し」を求めた状態。次回のバッチ対象。|
+|要求中|processing|AIにリクエストを投げた直後、または実行中。|
+|受領済み|refined|AIの回答が届き、ユーザーの確認を待っている状態。|
+|登録済み（更新あり）|completed_with_edit|AIの結果を元にユーザーが修正して確定させた。|
+|登録済み|completed|AIの結果をそのまま確定させた。|
+
+```
+{
+  "ai_refinement": {
+    "status": "refined",
+    "is_fixed": false,
+    "last_refinement_id": 1234,
+    "updated_at": "2026-02-26T14:00:00Z"
+  }
+}
+```
+
 
 
 ## zstu_tag_descriptions
@@ -233,6 +259,24 @@ CREATE TABLE zstu_posts (
 -- 2. タグ検索を高速化するための GIN インデックス
 -- これにより、数万件のデータがあっても「特定のタグを含む投稿」を瞬時に検索できます
 CREATE INDEX idx_zstu_posts_tags ON zstu_posts USING GIN (tags);
+
+
+{
+  "ai_refinement": {
+    "status": "refined",
+    "is_fixed": false,
+    "last_refinement_id": 1234,
+    "updated_at": "2026-02-26T14:00:00Z"
+  }
+}
+
+-- 1. details カラムの追加
+ALTER TABLE public.zstu_posts 
+ADD COLUMN details jsonb NOT NULL DEFAULT '{}'::jsonb;
+
+-- 2. JSONB 内部の検索を高速化するためのインデックス (任意ですが推奨)
+-- ステータス等でフィルタリングする場合に劇的に速くなります
+CREATE INDEX idx_zstu_posts_details ON public.zstu_posts USING gin (details);
 
 
 -- 1. zstu_tag_descriptions テーブルの作成
