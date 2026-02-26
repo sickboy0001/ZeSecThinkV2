@@ -581,10 +581,11 @@ CREATE INDEX idx_refinement_history_batch_id ON ai_refinement_history(batch_id);
 
 | カラム名 | 型 | 説明 |
 | --- | --- | --- |
-| `id` | `uuid` | 主キー (PK) |
+| `id` | `integer` | 主キー (PK) |
 | `template_id` | `integer` | `prompt_templates.id` への外部キー |
 | `version` | `integer` | バージョン番号 (1, 2, 3...) |
 | `content` | `text` | **プロンプト本文**（変数は `{{memo}}` `{{tags}}` 等で保持） |
+| `comment` | `text` | コメント |
 | `model_config` | `jsonb` | モデル設定（`model: "gpt-4o"`, `temperature: 0.7` など） |
 | `is_active` | `boolean` | **現在使用中のバージョンか**（Trueは1つのみ） |
 | `created_by` | `uuid` | 作成者のユーザーID（Supabase Authと連携） |
@@ -593,43 +594,58 @@ CREATE INDEX idx_refinement_history_batch_id ON ai_refinement_history(batch_id);
 ---
 
 ```
--- 1. prompt_templates (親テーブル)
+-- 1. 既存テーブルの削除（依存関係があるため子テーブルから）
+-- DROP TABLE IF EXISTS prompt_versions;
+-- DROP TABLE IF EXISTS prompt_templates;
+
+-- 2. prompt_templates (親テーブル)
 CREATE TABLE prompt_templates (
-    id SERIAL PRIMARY KEY, -- 自動採番の integer
-    slug TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    description TEXT,
+    id SERIAL PRIMARY KEY,
+    slug TEXT NOT NULL UNIQUE,          -- 'typo_prompt' などプログラムから参照するID
+    name TEXT NOT NULL,                -- 'タイポ修正プロンプト' などの表示名
+    description TEXT,                  -- プロンプトの用途説明
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2. prompt_versions (子テーブル)
+-- 3. prompt_versions (子テーブル)
 CREATE TABLE prompt_versions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,             -- デザイン変更：integer型の主キー
     template_id INTEGER NOT NULL REFERENCES prompt_templates(id) ON DELETE CASCADE,
-    version INTEGER NOT NULL,
-    content TEXT NOT NULL,
-    model_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    version INTEGER NOT NULL,          -- 1, 2, 3...
+    content TEXT NOT NULL,             -- プロンプト本文 ({{memo}} 等)
+    comment TEXT,                      -- バージョンの変更内容などのメモ
+    model_config JSONB NOT NULL DEFAULT '{}'::jsonb, -- { "model": "gpt-4o", "temp": 0.7 }
     is_active BOOLEAN NOT NULL DEFAULT FALSE,
     created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- Supabase Auth連携
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
-    -- 同じテンプレート内でバージョン番号が重複しないように制約
+
+    -- 制約：同じテンプレート内でバージョン番号が重複しない
     UNIQUE (template_id, version)
 );
 
+---
+-- 運用を安全・高速にするための設定
+---
 
--- 検索性を高めるためのインデックス
-CREATE INDEX idx_prompt_versions_template_id ON prompt_versions(template_id);
+-- 1つのテンプレートに対して is_active=true は1つだけに制限（論理矛盾を防止）
+CREATE UNIQUE INDEX idx_unique_active_version 
+ON prompt_versions (template_id) 
+WHERE (is_active = TRUE);
 
+-- 検索用インデックス（特定のテンプレートの有効なプロンプトを即座に取得）
+CREATE INDEX idx_prompt_versions_active_lookup 
+ON prompt_versions (template_id, is_active);
 
+-- RLS (Row Level Security) の設定例
+-- ALTER TABLE prompt_templates ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE prompt_versions ENABLE ROW LEVEL SECURITY;
 
--- ポリシー例: 認証済みユーザーのみ参照・変更可能（プロジェクトに合わせて調整してください）
--- CREATE POLICY "Allow authenticated full access to prompt_templates" 
--- ON prompt_templates FOR ALL TO authenticated USING (true);
+-- 認証済みユーザーに全権限を付与するポリシー（必要に応じて調整してください）
+-- CREATE POLICY "Allow full access to authenticated users" ON prompt_templates
+--     FOR ALL TO authenticated USING (true);
 
--- CREATE POLICY "Allow authenticated full access to prompt_versions" 
--- ON prompt_versions FOR ALL TO authenticated USING (true);
-
+-- CREATE POLICY "Allow full access to authenticated users" ON prompt_versions
+--     FOR ALL TO authenticated USING (true);
 ```
 
 

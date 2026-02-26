@@ -71,8 +71,8 @@ export async function processGeminiRefinement(
     const requestJson = JSON.stringify({ request_memo: requestMemo }, null, 2);
 
     let prompt = promptTemplate
-      .replace("{memo}", requestJson)
-      .replace("{tags}", requestTagsJson);
+      .replace("{{memo}}", requestJson)
+      .replace("{{tags}}", requestTagsJson);
 
     let retryCount = 0;
     const maxRetries = 3;

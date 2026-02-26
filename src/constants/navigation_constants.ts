@@ -16,4 +16,10 @@ export const navItems = [
   { name: "AI>Typo", href: "/AI/typo", icon: Sparkles },
   { name: "AI>Tags", href: "/AI/tags", icon: Tags },
   { name: "AILog", href: "/admin/ailog", icon: FileClock, adminOnly: true },
+  {
+    name: "SettingPrompt",
+    href: "/admin/setting/prompt",
+    icon: FileClock,
+    adminOnly: true,
+  },
 ];

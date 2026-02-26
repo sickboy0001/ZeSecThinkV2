@@ -161,7 +161,7 @@ export default function Analytics({ userId }: Props) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-6 animate-in fade-in duration-700">
+    <div className="w-full max-w-7xl mx-auto p-4 space-y-6 animate-in fade-in duration-500 overflow-x-hidden">
       {/* HEADER */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b pb-6">
         <div>
@@ -192,19 +192,21 @@ export default function Analytics({ userId }: Props) {
           </Select>
         </div>
       </header>
-
       <div className="grid gap-6 md:grid-cols-3">
         {/* 1. タグ・モメンタム */}
-        {stats && (
-          <AnalyticsTagMoment
-            momentumData={stats.momentumData}
-            sortedTags={stats.sortedTags}
-            maxVal={stats.maxVal}
-          />
-        )}
+        {/* これがないと、メニューボタンが消える<div className="overflow-x-auto"> */}
+        <div className="overflow-x-auto">
+          {stats && (
+            <AnalyticsTagMoment
+              momentumData={stats.momentumData}
+              sortedTags={stats.sortedTags}
+              maxVal={stats.maxVal}
+            />
+          )}
+        </div>
 
         {/* 2. AI インサイト */}
-        {/* <Card className="shadow-md border-primary/20 bg-primary/5">
+        <Card className="shadow-md border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-yellow-500" />
@@ -226,23 +228,23 @@ export default function Analytics({ userId }: Props) {
               件のメモ。継続的なアウトプットが維持されています。
             </div>
           </CardContent>
-        </Card> */}
+        </Card>
       </div>
-
       {/* 3. 活動密度ヒートマップ (postsから動的に生成) */}
       {stats && (
-        <AnalyticsTagHeatmap
-          range={range}
-          items={[
-            { label: "思考密度 (全体)", dateMap: stats.dateMap },
-            ...stats.sortedTags.map((tag) => ({
-              label: `#${tag.name}`,
-              dateMap: stats.tagDateMap[tag.name] || {},
-            })),
-          ]}
-        />
+        <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
+          <AnalyticsTagHeatmap
+            range={range}
+            items={[
+              { label: "思考密度 (全体)", dateMap: stats.dateMap },
+              ...stats.sortedTags.map((tag) => ({
+                label: `#${tag.name}`,
+                dateMap: stats.tagDateMap[tag.name] || {},
+              })),
+            ]}
+          />
+        </div>
       )}
-
       {/* 4. タグ詳細ランキング */}
       <Card className="shadow-md border-muted/40">
         <CardHeader>

@@ -19,14 +19,12 @@ import {
   getAiRefinementHistorys,
   AiRefinementHistory,
 } from "@/services/ai_log_service";
-import { typo_content } from "@/constants/gai_constants";
+import { default_typo_prompt } from "@/constants/gai_constants";
 import {
   processGeminiRefinement,
   RefinementResult,
 } from "@/services/gemini_service";
 import {
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   Check,
   Sparkles,
@@ -41,6 +39,7 @@ interface Props {
 }
 
 type Step = "select" | "confirm" | "result";
+type RangeType = "1w" | "2w" | "1m";
 
 type EditableRefinementResult = RefinementResult & {
   fixed_tags_str: string;
@@ -49,6 +48,7 @@ type EditableRefinementResult = RefinementResult & {
 
 export default function GeminiTypo({ userId }: Props) {
   const [step, setStep] = useState<Step>("select");
+  const [rangeType, setRangeType] = useState<RangeType>("1w");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [posts, setPosts] = useState<ZstuPost[]>([]);
   const [aiLogs, setAiLogs] = useState<AiRefinementHistory[]>([]);
@@ -132,7 +132,7 @@ export default function GeminiTypo({ userId }: Props) {
 
     // テンプレートのプレースホルダーを置換 ({memo} は残す)
     // データ量が多い場合、ここで展開するとUIが重くなる＆分割送信できないため
-    const prompt = typo_content;
+    const prompt = default_typo_prompt;
 
     setInput(prompt);
     setIsComplete(false);
@@ -180,19 +180,31 @@ export default function GeminiTypo({ userId }: Props) {
     }
   };
 
-  // Calculate start (Sunday) and end (Saturday) of the week
-  const getWeekRange = (date: Date) => {
+  const getDateRange = (date: Date, type: RangeType) => {
     const start = new Date(date);
-    const day = start.getDay(); // 0 is Sunday
-    start.setDate(start.getDate() - day); // Go back to Sunday
+    const end = new Date(date);
 
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6); // Go to Saturday
-
+    switch (type) {
+      case "1w":
+        const day1w = start.getDay();
+        start.setDate(start.getDate() - day1w); // Go back to Sunday
+        end.setDate(start.getDate() + 6); // Go to Saturday
+        break;
+      case "2w":
+        const day2w = start.getDay();
+        start.setDate(start.getDate() - day2w); // Go back to Sunday
+        end.setDate(start.getDate() + 13); // Go to 2nd Saturday
+        break;
+      case "1m":
+        start.setDate(1); // First day of the month
+        end.setMonth(end.getMonth() + 1);
+        end.setDate(0); // Last day of the month
+        break;
+    }
     return { start, end };
   };
 
-  const { start, end } = getWeekRange(currentDate);
+  const { start, end } = getDateRange(currentDate, rangeType);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -229,15 +241,35 @@ export default function GeminiTypo({ userId }: Props) {
     fetchPosts();
   }, [userId, start.toISOString(), end.toISOString(), refreshKey]);
 
-  const handlePrevWeek = () => {
+  const handlePrevRange = () => {
     const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() - 7);
+    switch (rangeType) {
+      case "1w":
+        newDate.setDate(newDate.getDate() - 7);
+        break;
+      case "2w":
+        newDate.setDate(newDate.getDate() - 14);
+        break;
+      case "1m":
+        newDate.setMonth(newDate.getMonth() - 1);
+        break;
+    }
     setCurrentDate(newDate);
   };
 
-  const handleNextWeek = () => {
+  const handleNextRange = () => {
     const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + 7);
+    switch (rangeType) {
+      case "1w":
+        newDate.setDate(newDate.getDate() + 7);
+        break;
+      case "2w":
+        newDate.setDate(newDate.getDate() + 14);
+        break;
+      case "1m":
+        newDate.setMonth(newDate.getMonth() + 1);
+        break;
+    }
     setCurrentDate(newDate);
   };
 
@@ -264,6 +296,13 @@ export default function GeminiTypo({ userId }: Props) {
     setSelectedPostIds(newSelectedIds);
   };
 
+  const handleRangeChange = (value: string) => {
+    if (value === "1w" || value === "2w" || value === "1m") {
+      setRangeType(value as RangeType);
+      setCurrentDate(new Date());
+    }
+  };
+
   useEffect(() => {
     if (logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -271,27 +310,10 @@ export default function GeminiTypo({ userId }: Props) {
   }, [executionLogs]);
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 animate-in overflow-x-auto slide-in-from-bottom-4 duration-500 ">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Logs</h1>
-          <p className="text-muted-foreground mt-1">
-            週間レポート ({start.toLocaleDateString()} -{" "}
-            {end.toLocaleDateString()})
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleToday}>
-            Today
-          </Button>
-          <div className="flex items-center border rounded-md">
-            <Button variant="ghost" size="icon" onClick={handlePrevWeek}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleNextWeek}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
       </header>
 
@@ -583,15 +605,24 @@ export default function GeminiTypo({ userId }: Props) {
       )}
       {/* // Step1 */}
       {step === "select" && (
-        <TypoStep1
-          posts={posts}
-          loading={loading}
-          selectedPostIds={selectedPostIds}
-          onSelectPost={handleSelectPost}
-          onBatchSelect={handleBatchSelect}
-          onPrepareForAI={handlePrepareForAI}
-          aiLogs={aiLogs}
-        />
+        <div className="overflow-x-auto">
+          <TypoStep1
+            posts={posts}
+            loading={loading}
+            selectedPostIds={selectedPostIds}
+            onSelectPost={handleSelectPost}
+            onBatchSelect={handleBatchSelect}
+            onPrepareForAI={handlePrepareForAI}
+            aiLogs={aiLogs}
+            start={start}
+            end={end}
+            onToday={handleToday}
+            onPrevRange={handlePrevRange}
+            onNextRange={handleNextRange}
+            rangeType={rangeType}
+            onRangeChange={handleRangeChange}
+          />
+        </div>
       )}
     </div>
   );

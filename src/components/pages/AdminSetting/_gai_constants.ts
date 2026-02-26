@@ -1,6 +1,3 @@
-export const TAG_COUNT_LIMIT = 30;
-export const CHUNK_SIZE = 20;
-export const WAIT_TIME_MS = 10000;
 export const prompt_template_list = ["typo_prompt", "week_summary_prompt"];
 export const prompt_description = [
   {
@@ -13,7 +10,7 @@ export const prompt_description = [
     },
   },
   {
-    id: "week_summary_promt",
+    id: "week_summary_prompt",
     descriptions: "週間要約のプロンプトです。",
     replace_word: {
       memo: "コンテンツを置換する場所です",

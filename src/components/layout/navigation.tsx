@@ -340,17 +340,26 @@ export function MobileNav() {
   }
 
   return (
-    <div className="md:hidden fixed top-4 left-4 z-[100]">
+    <div className="md:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-10 w-10 rounded-md border bg-background/80 backdrop-blur-sm shadow-sm hover:bg-muted transition-all active:scale-95"
-          >
-            <Menu className="h-6 w-6 text-foreground" />
-          </Button>
-        </SheetTrigger>
+        <div className="fixed top-4 left-4 z-[100] pointer-events-auto">
+          <SheetTrigger asChild>
+            {/* inset-inline-start (left) を明示し、かつ fixed が効くように isolate を追加 */}
+            <Button
+              size="icon"
+              variant="ghost"
+              className={cn(
+                /* 3. Button 自体の z-[999] や fixed は親と重複するので整理 */
+                "h-10 w-10 rounded-md border shadow-md transition-all",
+                "bg-background/95 backdrop-blur-md text-foreground",
+                "hover:bg-muted active:scale-95",
+              )}
+            >
+              <Menu className="h-6 w-6 text-foreground" />
+            </Button>
+          </SheetTrigger>
+        </div>
+
         <SheetContent
           side="left"
           className="w-[280px] bg-card/95 backdrop-blur-xl border-r flex flex-col h-full"

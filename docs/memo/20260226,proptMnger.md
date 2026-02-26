@@ -1,34 +1,8 @@
-AIへの問い合わせ、
-フロントエンドアプリ、バックエンドアプリ
-何方でも問い合わせを行います。
-同じ結果をもらいたいので、利用するプロンプトを統一したいと思っています。
-フロントエンド＝NextJS、バックエンド＝FastAPI
-データベース、Supabase
-データベース（AI問い合わせログ主体）；Turso
-を想定した構成です。
 
-以下の三点について意見もらえますか？
+## プロンプトの保存
 
-１：プロンプトのテンプレートに関してデータベースに保存しておくべきか？
-２：保存しておくのなら、どちらが最適か？
-３：編集機能も実装する必要があるが、フロントエンドのみで完結を想定して問題ないか？
-
-AIより）
-
-保存場所	Supabase（管理のしやすさと整合性重視）
-運用方法	プロンプトに ID（例: customer_support_v1） を振り、フロント・バック両方からそのIDで呼び出す
-編集機能	Next.js で管理画面を作成。履歴（ログ）は Turso へ保存
-
-
-Supabase（PostgreSQL）に保存することを前提とした、拡張性と運用性を兼ね備えたテーブル設計案を提示します。
-
-単に「最新のプロンプト」を上書きするのではなく、**「いつ、誰が、どのプロンプトを有効にしたか」**を管理できるようにすることで、AIの挙動がおかしくなった際の切り戻し（ロールバック）を容易にします。
-
----
-
-## 推奨テーブル設計案
-
-主に2つのテーブルで構成するのがクリーンです。
+- 複数のシステムから利用される情報（VercelNextJSやFastAPI）なので、テーブルに情報として持つ
+- 
 
 ### 1. `prompt_templates` (親テーブル)
 
@@ -36,8 +10,8 @@ Supabase（PostgreSQL）に保存することを前提とした、拡張性と�
 
 | カラム名 | 型 | 説明 |
 | --- | --- | --- |
-| `id` | `uuid` | 主キー (PK) |
-| `slug` | `text` | プロンプト識別子（例: `customer_support_reply`）※一意制約 |
+| `id` | `integer` | 主キー (PK) |
+| `slug` | `text` | プロンプト識別子（例: `typo_propmt`）※一意制約 |
 | `name` | `text` | 管理用の表示名（例: カスタマーサポート返信） |
 | `description` | `text` | このプロンプトの用途説明 |
 | `created_at` | `timestamptz` | 作成日時 |
@@ -49,15 +23,56 @@ Supabase（PostgreSQL）に保存することを前提とした、拡張性と�
 | カラム名 | 型 | 説明 |
 | --- | --- | --- |
 | `id` | `uuid` | 主キー (PK) |
-| `template_id` | `uuid` | `prompt_templates.id` への外部キー |
+| `template_id` | `integer` | `prompt_templates.id` への外部キー |
 | `version` | `integer` | バージョン番号 (1, 2, 3...) |
-| `content` | `text` | **プロンプト本文**（変数は `{{user_name}}` 等で保持） |
+| `content` | `text` | **プロンプト本文**（変数は `{{memo}}` `{{tags}}` 等で保持） |
 | `model_config` | `jsonb` | モデル設定（`model: "gpt-4o"`, `temperature: 0.7` など） |
 | `is_active` | `boolean` | **現在使用中のバージョンか**（Trueは1つのみ） |
 | `created_by` | `uuid` | 作成者のユーザーID（Supabase Authと連携） |
 | `created_at` | `timestamptz` | 作成日時 |
 
 ---
+
+```
+-- 1. prompt_templates (親テーブル)
+CREATE TABLE prompt_templates (
+    id SERIAL PRIMARY KEY, -- 自動採番の integer
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2. prompt_versions (子テーブル)
+CREATE TABLE prompt_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id INTEGER NOT NULL REFERENCES prompt_templates(id) ON DELETE CASCADE,
+    version INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    model_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- Supabase Auth連携
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    
+    -- 同じテンプレート内でバージョン番号が重複しないように制約
+    UNIQUE (template_id, version)
+);
+
+
+-- 検索性を高めるためのインデックス
+CREATE INDEX idx_prompt_versions_template_id ON prompt_versions(template_id);
+
+
+
+-- ポリシー例: 認証済みユーザーのみ参照・変更可能（プロジェクトに合わせて調整してください）
+-- CREATE POLICY "Allow authenticated full access to prompt_templates" 
+-- ON prompt_templates FOR ALL TO authenticated USING (true);
+
+-- CREATE POLICY "Allow authenticated full access to prompt_versions" 
+-- ON prompt_versions FOR ALL TO authenticated USING (true);
+
+```
+
 
 ## 実装のポイント
 

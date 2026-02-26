@@ -14,8 +14,8 @@ export default function Logs({ userId }: Props) {
   const [viewMode, setViewMode] = useState<"weekly" | "monthly">("weekly");
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-      <header className="flex items-center justify-between">
+    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 overflow-x-auto">
+      <header className="flex items-center justify-between overflow-x-auto">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Logs</h1>
           <p className="text-muted-foreground mt-1">
@@ -29,7 +29,7 @@ export default function Logs({ userId }: Props) {
         onValueChange={(v: any) => setViewMode(v)}
         className="w-full"
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 overflow-x-auto">
           <TabsList>
             <TabsTrigger value="weekly" className="gap-2">
               <Calendar className="h-4 w-4" /> 週間
@@ -41,7 +41,9 @@ export default function Logs({ userId }: Props) {
         </div>
 
         <TabsContent value="weekly">
-          <LogsWeek userId={userId} />
+          <div className="overflow-x-auto">
+            <LogsWeek userId={userId} />
+          </div>
         </TabsContent>
 
         <TabsContent value="monthly">

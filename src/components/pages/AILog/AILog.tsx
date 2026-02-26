@@ -25,14 +25,14 @@ export default function MemoCalendar({ userId }: Props) {
     );
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 m-0">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Memo Calendar</h1>
         </div>
       </header>
 
-      <Tabs defaultValue="calendar" className="w-full">
+      <Tabs defaultValue="calendar" className="w-full ">
         <TabsList className="grid w-[400px] grid-cols-2 mb-4">
           <TabsTrigger value="calendar" className="flex items-center gap-2">
             <CalendarIcon className="h-4 w-4" /> カレンダー
@@ -40,20 +40,17 @@ export default function MemoCalendar({ userId }: Props) {
           <TabsTrigger value="batchs" className="flex items-center gap-2">
             <List className="h-4 w-4" /> バッチ
           </TabsTrigger>
-
-          <TabsTrigger value="list" className="flex items-center gap-2">
-            <List className="h-4 w-4" /> リスト
-          </TabsTrigger>
         </TabsList>
-
         <TabsContent value="calendar">
-          <Calender
-            userId={userId}
-            currentDate={currentDate}
-            onPrevMonth={handlePrevMonth}
-            onNextMonth={handleNextMonth}
-            onToday={() => setCurrentDate(new Date())}
-          />
+          <div className="w-full overflow-x-auto scrollbar-hide">
+            <Calender
+              userId={userId}
+              currentDate={currentDate}
+              onPrevMonth={handlePrevMonth}
+              onNextMonth={handleNextMonth}
+              onToday={() => setCurrentDate(new Date())}
+            />
+          </div>
         </TabsContent>
         <TabsContent value="batchs">
           {/* リスト表示が必要な場合はここに実装 */}
