@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { SummaryDate } from "@/services/zstuposts_service";
 import Link from "next/link";
+import { StepCounter } from "@/components/molecules/StepCounter";
 
 interface Props {
   summaryData: SummaryDate[];
@@ -21,6 +22,18 @@ export function RecentActivityTable({ summaryData }: Props) {
   const maxPostCount = Math.max(...summaryData.map((d) => d.post_count), 1);
   const maxSeconds = Math.max(...summaryData.map((d) => d.total_seconds), 1);
   const maxChars = Math.max(...summaryData.map((d) => d.total_chars), 1);
+  const maxAvgChars = Math.max(
+    ...summaryData.map((d) =>
+      d.post_count > 0 ? d.total_chars / d.post_count : 0,
+    ),
+    1,
+  );
+  const maxAvgSeconds = Math.max(
+    ...summaryData.map((d) =>
+      d.post_count > 0 ? d.total_seconds / d.post_count : 0,
+    ),
+    1,
+  );
 
   const formatTime = (seconds: number) => {
     return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
@@ -57,9 +70,11 @@ export function RecentActivityTable({ summaryData }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[120px]">日付</TableHead>
-              <TableHead className="w-[28%]">投稿数</TableHead>
-              <TableHead className="w-[28%]">思考時間</TableHead>
-              <TableHead className="w-[28%]">文字数</TableHead>
+              <TableHead className="w-[16%]">投稿数</TableHead>
+              <TableHead className="w-[16%]">思考時間</TableHead>
+              <TableHead className="w-[16%]">文字数</TableHead>
+              <TableHead className="w-[16%]">平均時間</TableHead>
+              <TableHead className="w-[16%]">平均文字数</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -70,6 +85,11 @@ export function RecentActivityTable({ summaryData }: Props) {
               const m = String(dateObj.getMonth() + 1).padStart(2, "0");
               const d = String(dateObj.getDate()).padStart(2, "0");
               const linkDate = `${y}${m}${d}`;
+              const avgChars =
+                item.post_count > 0 ? item.total_chars / item.post_count : 0;
+              const avgSeconds =
+                item.post_count > 0 ? item.total_seconds / item.post_count : 0;
+
               return (
                 <TableRow key={item.date}>
                   <TableCell
@@ -89,12 +109,7 @@ export function RecentActivityTable({ summaryData }: Props) {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <DataBar
-                      value={item.post_count}
-                      max={maxPostCount}
-                      label={item.post_count.toString()}
-                      color="bg-blue-100 dark:bg-blue-900/50"
-                    />
+                    <StepCounter count={item.post_count} />
                   </TableCell>
                   <TableCell>
                     <DataBar
@@ -110,6 +125,22 @@ export function RecentActivityTable({ summaryData }: Props) {
                       max={maxChars}
                       label={item.total_chars.toLocaleString()}
                       color="bg-orange-100 dark:bg-orange-900/50"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <DataBar
+                      value={avgSeconds}
+                      max={maxAvgSeconds}
+                      label={formatTime(Math.round(avgSeconds))}
+                      color="bg-cyan-100 dark:bg-cyan-900/50"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <DataBar
+                      value={avgChars}
+                      max={maxAvgChars}
+                      label={avgChars.toFixed(1)}
+                      color="bg-purple-100 dark:bg-purple-900/50"
                     />
                   </TableCell>
                 </TableRow>

@@ -3,6 +3,10 @@
 import { executeQuery } from "@/lib/actions";
 import { ActivePromptResponse, PromptVersion } from "@/type/prompt";
 import { revalidatePath } from "next/cache";
+import {
+  default_typo_prompt,
+  default_week_summary_prompt,
+} from "@/constants/gai_constants";
 
 interface SavePromptParams {
   userId: string;
@@ -13,6 +17,14 @@ interface SavePromptParams {
   temp: number;
 }
 
+/*
+export async function getActivePromp({
+    const activeSlug = "typo_prompt"
+    const [pData] = await Promise.all([
+      getActivePrompt(activeSlug)
+          ]);
+    const prompt = pData.content
+     */
 export async function savePromptVersion({
   userId,
   slug,
@@ -145,13 +157,25 @@ export async function getActivePrompt(
 
   const result = await executeQuery(query);
 
-  if (
-    !result.success ||
-    !Array.isArray(result.data) ||
-    result.data.length === 0
-  ) {
-    return null;
+  if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+    return result.data[0] as unknown as ActivePromptResponse;
   }
 
-  return result.data[0] as unknown as ActivePromptResponse;
+  // DBにない場合は定数からデフォルト値を取得
+  let fallbackContent = "";
+  if (slug === "typo_prompt") {
+    fallbackContent = default_typo_prompt;
+  } else if (slug === "week_summary_prompt") {
+    fallbackContent = default_week_summary_prompt;
+  }
+
+  if (fallbackContent) {
+    return {
+      version: 0,
+      content: fallbackContent,
+      model_config: { model: "gemini-1.5-flash", temperature: 0.7 },
+    } as unknown as ActivePromptResponse;
+  }
+
+  return null;
 }

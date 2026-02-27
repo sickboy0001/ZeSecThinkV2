@@ -33,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import TypoStep1 from "@/components/molecules/AI/TypoStep1";
+import { getActivePrompt } from "@/services/setting_prompt_service";
 
 interface Props {
   userId: string;
@@ -124,19 +125,27 @@ export default function GeminiTypo({ userId }: Props) {
     }
   };
 
-  const handlePrepareForAI = () => {
+  const handlePrepareForAI = async () => {
     if (selectedPostIds.size === 0) {
       toast.warning("修正する投稿を選択してください。");
       return;
     }
 
-    // テンプレートのプレースホルダーを置換 ({memo} は残す)
-    // データ量が多い場合、ここで展開するとUIが重くなる＆分割送信できないため
-    const prompt = default_typo_prompt;
+    try {
+      const activeSlug = "typo_prompt";
+      const pData = await getActivePrompt(activeSlug);
+      const prompt = pData?.content || default_typo_prompt;
+      console.log("Fetched prompt:", prompt);
 
-    setInput(prompt);
-    setIsComplete(false);
-    setStep("confirm");
+      setInput(prompt);
+      setIsComplete(false);
+      setStep("confirm");
+    } catch (error) {
+      console.error("Failed to fetch prompt:", error);
+      setInput(default_typo_prompt);
+      setIsComplete(false);
+      setStep("confirm");
+    }
   };
 
   const handleUpdatePosts = async () => {
