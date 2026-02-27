@@ -66,88 +66,179 @@ export function RecentActivityTable({ summaryData }: Props) {
         <CardTitle className="text-lg">過去7日間の活動</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[120px]">日付</TableHead>
-              <TableHead className="w-[16%]">投稿数</TableHead>
-              <TableHead className="w-[16%]">思考時間</TableHead>
-              <TableHead className="w-[16%]">文字数</TableHead>
-              <TableHead className="w-[16%]">平均時間</TableHead>
-              <TableHead className="w-[16%]">平均文字数</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {summaryData.map((item) => {
-              const dateObj = new Date(item.date);
-              const day = dateObj.getDay();
-              const y = dateObj.getFullYear();
-              const m = String(dateObj.getMonth() + 1).padStart(2, "0");
-              const d = String(dateObj.getDate()).padStart(2, "0");
-              const linkDate = `${y}${m}${d}`;
-              const avgChars =
-                item.post_count > 0 ? item.total_chars / item.post_count : 0;
-              const avgSeconds =
-                item.post_count > 0 ? item.total_seconds / item.post_count : 0;
+        {/* PC表示: テーブル */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[120px]">日付</TableHead>
+                <TableHead className="w-[16%]">投稿数</TableHead>
+                <TableHead className="w-[16%]">思考時間</TableHead>
+                <TableHead className="w-[16%]">文字数</TableHead>
+                <TableHead className="w-[16%]">平均時間</TableHead>
+                <TableHead className="w-[16%]">平均文字数</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {summaryData.map((item) => {
+                const dateObj = new Date(item.date);
+                const day = dateObj.getDay();
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+                const d = String(dateObj.getDate()).padStart(2, "0");
+                const linkDate = `${y}${m}${d}`;
+                const avgChars =
+                  item.post_count > 0 ? item.total_chars / item.post_count : 0;
+                const avgSeconds =
+                  item.post_count > 0
+                    ? item.total_seconds / item.post_count
+                    : 0;
 
-              return (
-                <TableRow key={item.date}>
-                  <TableCell
-                    className={
+                return (
+                  <TableRow key={item.date}>
+                    <TableCell
+                      className={
+                        day === 0
+                          ? "text-red-600"
+                          : day === 6
+                            ? "text-blue-600"
+                            : ""
+                      }
+                    >
+                      <Link
+                        href={`/zst/posts?date=${linkDate}`}
+                        className="hover:underline underline-offset-4"
+                      >
+                        {dateObj.toLocaleDateString("ja-JP")}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <StepCounter count={item.post_count} />
+                    </TableCell>
+                    <TableCell>
+                      <DataBar
+                        value={item.total_seconds}
+                        max={maxSeconds}
+                        label={formatTime(item.total_seconds)}
+                        color="bg-green-100 dark:bg-green-900/50"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <DataBar
+                        value={item.total_chars}
+                        max={maxChars}
+                        label={item.total_chars.toLocaleString()}
+                        color="bg-orange-100 dark:bg-orange-900/50"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <DataBar
+                        value={avgSeconds}
+                        max={maxAvgSeconds}
+                        label={formatTime(Math.round(avgSeconds))}
+                        color="bg-cyan-100 dark:bg-cyan-900/50"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <DataBar
+                        value={avgChars}
+                        max={maxAvgChars}
+                        label={avgChars.toFixed(1)}
+                        color="bg-purple-100 dark:bg-purple-900/50"
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* スマホ表示: カードリスト */}
+        <div className="md:hidden space-y-4">
+          {summaryData.map((item) => {
+            const dateObj = new Date(item.date);
+            const day = dateObj.getDay();
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+            const d = String(dateObj.getDate()).padStart(2, "0");
+            const linkDate = `${y}${m}${d}`;
+            const avgChars =
+              item.post_count > 0 ? item.total_chars / item.post_count : 0;
+            const avgSeconds =
+              item.post_count > 0 ? item.total_seconds / item.post_count : 0;
+
+            return (
+              <div
+                key={item.date}
+                className="flex flex-col gap-3 p-4 border rounded-lg bg-card shadow-sm"
+              >
+                <div className="flex items-center justify-between border-b pb-2">
+                  <Link
+                    href={`/zst/posts?date=${linkDate}`}
+                    className={`font-bold hover:underline underline-offset-4 ${
                       day === 0
                         ? "text-red-600"
                         : day === 6
                           ? "text-blue-600"
                           : ""
-                    }
+                    }`}
                   >
-                    <Link
-                      href={`/zst/posts?date=${linkDate}`}
-                      className="hover:underline underline-offset-4"
-                    >
-                      {dateObj.toLocaleDateString("ja-JP")}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <StepCounter count={item.post_count} />
-                  </TableCell>
-                  <TableCell>
+                    {dateObj.toLocaleDateString("ja-JP")}
+                  </Link>
+                  <StepCounter count={item.post_count} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">
+                      思考時間
+                    </span>
                     <DataBar
                       value={item.total_seconds}
                       max={maxSeconds}
                       label={formatTime(item.total_seconds)}
                       color="bg-green-100 dark:bg-green-900/50"
                     />
-                  </TableCell>
-                  <TableCell>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">
+                      文字数
+                    </span>
                     <DataBar
                       value={item.total_chars}
                       max={maxChars}
                       label={item.total_chars.toLocaleString()}
                       color="bg-orange-100 dark:bg-orange-900/50"
                     />
-                  </TableCell>
-                  <TableCell>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">
+                      平均時間
+                    </span>
                     <DataBar
                       value={avgSeconds}
                       max={maxAvgSeconds}
                       label={formatTime(Math.round(avgSeconds))}
                       color="bg-cyan-100 dark:bg-cyan-900/50"
                     />
-                  </TableCell>
-                  <TableCell>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">
+                      平均文字数
+                    </span>
                     <DataBar
                       value={avgChars}
                       max={maxAvgChars}
                       label={avgChars.toFixed(1)}
                       color="bg-purple-100 dark:bg-purple-900/50"
                     />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );
