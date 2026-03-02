@@ -10,6 +10,7 @@ import {
   LogIn,
   ChevronDown,
   ChevronRight,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,11 +21,18 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { logout } from "@/app/(auth)/actions";
 import { navItems } from "@/constants/navigation_constants";
 import { checkIsAdmin } from "@/lib/roleCheck";
+import { fetchUserProfile } from "@/services/user_profile_service";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -35,6 +43,7 @@ export function Sidebar() {
     {},
   );
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -45,6 +54,8 @@ export function Sidebar() {
       if (user?.email) {
         const isAdm = await checkIsAdmin(user.email);
         setIsAdmin(isAdm);
+        const profile = await fetchUserProfile(user.id);
+        setUserProfile(profile);
       }
     };
     getUser();
@@ -56,8 +67,11 @@ export function Sidebar() {
       if (session?.user?.email) {
         const isAdm = await checkIsAdmin(session.user.email);
         setIsAdmin(isAdm);
+        const profile = await fetchUserProfile(session.user.id);
+        setUserProfile(profile);
       } else {
         setIsAdmin(false);
+        setUserProfile(null);
       }
     });
 
@@ -190,6 +204,9 @@ export function Sidebar() {
                           >
                             <child.icon className="w-4 h-4" />
                             <span>{child.name}</span>
+                            {child.adminOnly && (
+                              <UserCog className="w-4 h-4 text-muted-foreground" />
+                            )}
                           </Link>
                         );
                       })}
@@ -220,6 +237,9 @@ export function Sidebar() {
                   )}
                 />
                 <span className="font-medium">{item.name}</span>
+                {item.adminOnly && (
+                  <UserCog className="w-3 h-3 text-muted-foreground" />
+                )}
               </Link>
             );
           })}
@@ -229,8 +249,28 @@ export function Sidebar() {
       <div className="pt-4 border-t border-border/50">
         {isLoggedIn && (
           <>
-            <div className="text-sm text-muted-foreground px-2 mb-2 truncate">
-              {user?.email}
+            <div className="px-2 mb-2 truncate">
+              {userProfile?.full_name ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-sm font-medium cursor-help text-foreground truncate">
+                        {userProfile.full_name}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Login: {user?.email}</p>
+                      {userProfile.notify_email && (
+                        <p>Notify: {userProfile.notify_email}</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <div className="text-sm text-muted-foreground truncate">
+                  {user?.email}
+                </div>
+              )}
             </div>
             <div className="my-2 border-t border-border/50" />
           </>
@@ -272,6 +312,7 @@ export function MobileNav() {
     {},
   );
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -282,6 +323,8 @@ export function MobileNav() {
       if (user?.email) {
         const isAdm = await checkIsAdmin(user.email);
         setIsAdmin(isAdm);
+        const profile = await fetchUserProfile(user.id);
+        setUserProfile(profile);
       }
     };
     getUser();
@@ -293,8 +336,11 @@ export function MobileNav() {
       if (session?.user?.email) {
         const isAdm = await checkIsAdmin(session.user.email);
         setIsAdmin(isAdm);
+        const profile = await fetchUserProfile(session.user.id);
+        setUserProfile(profile);
       } else {
         setIsAdmin(false);
+        setUserProfile(null);
       }
     });
 
@@ -376,8 +422,28 @@ export function MobileNav() {
                   ZeroSecThink
                 </SheetTitle>
                 {isLoggedIn && (
-                  <div className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">
-                    {user?.email}
+                  <div className="mt-0.5 max-w-[180px]">
+                    {userProfile?.full_name ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="text-xs font-medium cursor-help text-foreground truncate">
+                              {userProfile.full_name}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Login: {user?.email}</p>
+                            {userProfile.notify_email && (
+                              <p>Notify: {userProfile.notify_email}</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <div className="text-[10px] text-muted-foreground truncate">
+                        {user?.email}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -431,6 +497,9 @@ export function MobileNav() {
                             >
                               <child.icon className="w-4 h-4" />
                               <span>{child.name}</span>
+                              {child.adminOnly && (
+                                <UserCog className="w-3 h-3 text-muted-foreground" />
+                              )}
                             </Link>
                           ))}
                         </div>
@@ -454,6 +523,9 @@ export function MobileNav() {
                   >
                     <item.icon className="w-5 h-5" />
                     <span className="font-medium">{item.name}</span>
+                    {item.adminOnly && (
+                      <UserCog className="w-3 h-3 text-muted-foreground" />
+                    )}
                   </Link>
                 );
               })}

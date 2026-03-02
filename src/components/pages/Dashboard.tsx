@@ -103,7 +103,7 @@ export default function Dashboard({ userId }: Props) {
       </Accordion>
 
       <div className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-5">
           <Link href="/zst/posts">
             <Button
               variant="outline"
@@ -131,6 +131,25 @@ export default function Dashboard({ userId }: Props) {
               <span>分析表示-Analytics</span>
             </Button>
           </Link>
+          <Link href="/setting/profile">
+            <Button
+              variant="outline"
+              className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
+            >
+              <Settings className="h-6 w-6 group-hover:scale-110 transition-transform" />
+              <span>プロフィール設定-Setting</span>
+            </Button>
+          </Link>
+          <Link href="/AI/log/list">
+            <Button
+              variant="outline"
+              className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
+            >
+              <Settings className="h-6 w-6 group-hover:scale-110 transition-transform" />
+              <span>AIログ表示-AI Log</span>
+            </Button>
+          </Link>
+          {/* http://localhost:3000/AI/log/list */}
         </div>
       </div>
 

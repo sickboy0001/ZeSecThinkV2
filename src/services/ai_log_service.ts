@@ -1,6 +1,15 @@
 "use server";
 import { turso } from "@/lib/turso/turso";
 
+export interface AiLogList {
+  id: number;
+  created_at: string;
+  total_chunks: number;
+  completed_chunks: number;
+  total_memos: number;
+  status: string;
+}
+
 export interface AiRefinementHistory {
   id: number;
   post_id: number;
@@ -165,6 +174,25 @@ export async function applyAiRefinementHistory(
       batchId,
     ],
   });
+}
+
+export async function getAiLogList(userId: string) {
+  const result = await turso.execute({
+    sql: `
+      SELECT 
+        id,
+        created_at,
+        total_chunks,
+        completed_chunks,
+        total_memos ,
+        status   
+        FROM ai_batches
+      where user_id = ?
+      order by created_at desc
+    `,
+    args: [userId],
+  });
+  return result.rows.map((row) => ({ ...row }));
 }
 
 /**
