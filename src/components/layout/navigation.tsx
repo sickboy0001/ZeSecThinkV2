@@ -205,7 +205,7 @@ export function Sidebar() {
                             <child.icon className="w-4 h-4" />
                             <span>{child.name}</span>
                             {child.adminOnly && (
-                              <UserCog className="w-4 h-4 text-muted-foreground" />
+                              <UserCog className="w-4 h-4 text-destructive" />
                             )}
                           </Link>
                         );
@@ -238,7 +238,7 @@ export function Sidebar() {
                 />
                 <span className="font-medium">{item.name}</span>
                 {item.adminOnly && (
-                  <UserCog className="w-3 h-3 text-muted-foreground" />
+                  <UserCog className="w-3 h-3 text-destructive" />
                 )}
               </Link>
             );

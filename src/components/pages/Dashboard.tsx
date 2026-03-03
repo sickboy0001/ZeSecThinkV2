@@ -1,18 +1,11 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  ClipboardList,
-  Settings,
-  PieChart,
-  Clock,
-  FileText,
-  Type,
-} from "lucide-react";
-import Link from "next/link";
+import { Clock, FileText } from "lucide-react";
 import { SummaryDate, getZstuPostsSummary } from "@/services/zstuposts_service";
 import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { checkIsAdmin } from "@/lib/roleCheck";
 import {
   Accordion,
   AccordionContent,
@@ -20,8 +13,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { MarkdownRenderer } from "@/components/atoms/MarkdownRenderer";
+
 import { guides_content } from "@/constants/page_constants";
 import { RecentActivityTable } from "@/components/molecules/RecentActivityTable";
+import { cn } from "@/lib/utils";
+import { NavMenu } from "../molecules/DashBoard/NavMenu";
 
 interface Props {
   userId: string;
@@ -101,57 +97,7 @@ export default function Dashboard({ userId }: Props) {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-
-      <div className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-5">
-          <Link href="/zst/posts">
-            <Button
-              variant="outline"
-              className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
-            >
-              <ClipboardList className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              <span>投稿-Posts</span>
-            </Button>
-          </Link>
-          <Link href="/zst/logs">
-            <Button
-              variant="outline"
-              className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
-            >
-              <Settings className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              <span>記録-Logs</span>
-            </Button>
-          </Link>
-          <Link href="/zst/analytics">
-            <Button
-              variant="outline"
-              className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
-            >
-              <PieChart className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              <span>分析表示-Analytics</span>
-            </Button>
-          </Link>
-          <Link href="/setting/profile">
-            <Button
-              variant="outline"
-              className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
-            >
-              <Settings className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              <span>プロフィール設定-Setting</span>
-            </Button>
-          </Link>
-          <Link href="/AI/log/list">
-            <Button
-              variant="outline"
-              className="w-full h-24 flex flex-col gap-2 bg-card hover:border-primary hover:text-primary transition-all group"
-            >
-              <Settings className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              <span>AIログ表示-AI Log</span>
-            </Button>
-          </Link>
-          {/* http://localhost:3000/AI/log/list */}
-        </div>
-      </div>
+      <NavMenu userId={userId}></NavMenu>
 
       {/* <div>{JSON.stringify(summaryData)}</div> */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

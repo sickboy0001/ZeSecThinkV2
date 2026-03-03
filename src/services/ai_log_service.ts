@@ -10,6 +10,23 @@ export interface AiLogList {
   status: string;
 }
 
+export interface AiLogDetail {
+  id: number;
+  post_id: number;
+  batch_id: number;
+  order_index: number;
+  before_title: string | null;
+  before_text: string | null;
+  before_tags: string | null;
+  after_title: string | null;
+  after_text: string | null;
+  after_tags: string | null;
+  changes_summary: string | null;
+  fixed_title: string | null;
+  fixed_text: string | null;
+  fixed_tags: string | null;
+}
+
 export interface AiRefinementHistory {
   id: number;
   post_id: number;
@@ -193,6 +210,34 @@ export async function getAiLogList(userId: string) {
     args: [userId],
   });
   return result.rows.map((row) => ({ ...row }));
+}
+
+export async function getAiLogDetail(batchid: string): Promise<AiLogDetail[]> {
+  const result = await turso.execute({
+    sql: `
+      SELECT 
+          id,
+          post_id,
+          batch_id,
+          order_index,
+          before_title,
+          before_text,
+          before_tags,
+          after_title,
+          after_text,
+          after_tags,
+          changes_summary,
+          fixed_title,
+          fixed_text,
+          fixed_tags
+        FROM ai_refinement_history
+      where batch_id = ?
+      order by order_index asc
+    `,
+    args: [batchid],
+  });
+  // Server ActionからClient Componentへ渡すため、プレーンオブジェクトに変換する
+  return result.rows.map((row) => ({ ...row })) as unknown as AiLogDetail[];
 }
 
 /**
