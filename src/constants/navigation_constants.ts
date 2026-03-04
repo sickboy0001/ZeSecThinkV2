@@ -15,7 +15,7 @@ export const navItems = [
   { name: "Posts", href: "/zst/posts", icon: ClipboardList },
   { name: "Logs", href: "/zst/logs", icon: ScrollText },
   { name: "Analytics", href: "/zst/analytics/analytics", icon: BarChart3 },
-  { name: "AI>Typo", href: "/AI/typo", icon: Sparkles },
+  { name: "AI>Typo", href: "/AI/RequestTypo", icon: Sparkles },
   { name: "AI>Tags", href: "/AI/tags", icon: Tags },
 ];
 

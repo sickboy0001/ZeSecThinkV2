@@ -47,7 +47,7 @@ type EditableRefinementResult = RefinementResult & {
   should_update: boolean;
 };
 
-export default function GeminiTypo({ userId }: Props) {
+export default function RequestTypo({ userId }: Props) {
   const [step, setStep] = useState<Step>("select");
   const [rangeType, setRangeType] = useState<RangeType>("1w");
   const [currentDate, setCurrentDate] = useState(new Date());

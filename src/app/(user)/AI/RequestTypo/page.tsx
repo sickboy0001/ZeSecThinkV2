@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import GeminiTypo from "@/components/pages/AI/Typo";
+import RequestTypo from "@/components/pages/AI/RequestTypo";
 
 export default async function Page() {
   const supabase = await createClient();
@@ -12,5 +12,5 @@ export default async function Page() {
 
   if (!user) redirect("/login");
 
-  return <GeminiTypo userId={user.id} />;
+  return <RequestTypo userId={user.id} />;
 }
