@@ -92,12 +92,17 @@ export function PostsRegistDialog({
         .filter(Boolean);
 
       if (post) {
-        // --- 変更検知ロジック ---
+        // --- 既存投稿の更新ロジック ---
+        console.log("変更前:", {
+          title: post.title,
+          content: post.content,
+          tags: post.tags,
+        });
+
         const isTitleChanged = newPostTitle.trim() !== (post.title || "");
         const isContentChanged = newPostContent !== (post.content || "");
 
-        // タグの比較 (カンマ区切りの文字列にして比較するのが最も簡単です)
-        const currentTagsStr = tags.sort().join(",");
+        const currentTagsStr = tags.slice().sort().join(",");
         const originalTagsStr = (post.tags || []).slice().sort().join(",");
         const isTagsChanged = currentTagsStr !== originalTagsStr;
 
@@ -108,17 +113,25 @@ export function PostsRegistDialog({
           second: (post.second || 0) + elapsedTime,
         };
 
-        // 重要項目が変更された場合のみ Unprocessed (AI再処理対象) として更新
         if (isTitleChanged || isContentChanged || isTagsChanged) {
           await updateZstuPostUnprocessed(post.id, updateParams);
           toast.success(
             "内容が変更されたため、AI解析をリセットして更新しました",
           );
         } else {
-          // 時間やフラグのみの更新などの場合
           await updateZstuPost(post.id, updateParams);
           toast.success("投稿を更新しました");
         }
+      } else {
+        // --- ★ここが抜けていた新規登録ロジック ---
+        await createZstuPost(userId, {
+          title: newPostTitle.trim(),
+          content: newPostContent,
+          tags: tags,
+          second: elapsedTime,
+          current_at: currentDate, // currentDateが定義されていることを確認してください
+        });
+        toast.success("投稿を作成しました");
       }
 
       setNewPostContent("");
