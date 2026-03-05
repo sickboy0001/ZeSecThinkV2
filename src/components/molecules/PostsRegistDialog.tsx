@@ -17,6 +17,7 @@ import {
   ZstuPost,
   createZstuPost,
   updateZstuPost,
+  updateZstuPostUnprocessed, // 追加
 } from "@/services/zstuposts_service";
 
 interface Props {
@@ -91,22 +92,33 @@ export function PostsRegistDialog({
         .filter(Boolean);
 
       if (post) {
-        await updateZstuPost(post.id, {
+        // --- 変更検知ロジック ---
+        const isTitleChanged = newPostTitle.trim() !== (post.title || "");
+        const isContentChanged = newPostContent !== (post.content || "");
+
+        // タグの比較 (カンマ区切りの文字列にして比較するのが最も簡単です)
+        const currentTagsStr = tags.sort().join(",");
+        const originalTagsStr = (post.tags || []).slice().sort().join(",");
+        const isTagsChanged = currentTagsStr !== originalTagsStr;
+
+        const updateParams = {
           title: newPostTitle.trim(),
           content: newPostContent,
           tags: tags,
           second: (post.second || 0) + elapsedTime,
-        });
-        toast.success("投稿を更新しました");
-      } else {
-        await createZstuPost(userId, {
-          title: newPostTitle.trim(),
-          content: newPostContent,
-          tags: tags,
-          second: elapsedTime,
-          current_at: currentDate,
-        });
-        toast.success("投稿を作成しました");
+        };
+
+        // 重要項目が変更された場合のみ Unprocessed (AI再処理対象) として更新
+        if (isTitleChanged || isContentChanged || isTagsChanged) {
+          await updateZstuPostUnprocessed(post.id, updateParams);
+          toast.success(
+            "内容が変更されたため、AI解析をリセットして更新しました",
+          );
+        } else {
+          // 時間やフラグのみの更新などの場合
+          await updateZstuPost(post.id, updateParams);
+          toast.success("投稿を更新しました");
+        }
       }
 
       setNewPostContent("");

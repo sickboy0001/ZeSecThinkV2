@@ -13,6 +13,15 @@ import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
 import { LogEditableCell } from "./LogEditableCell";
 
+// updateZstuPost関数に渡すことができるフィールドの型を定義します。
+// これにより、互換性のない'state_detail'などのフィールドを含むPartial<ZstuPost>全体を渡すことによる型エラーを防ぎます。
+type ZstuPostUpdatePayload = Partial<
+  Pick<
+    ZstuPost,
+    "title" | "content" | "tags" | "public_flg" | "delete_flg" | "second"
+  >
+>;
+
 interface Props {
   userId: string;
 }
@@ -83,7 +92,7 @@ export function LogsMonth({ userId }: Props) {
     return days;
   }, [range]);
 
-  const handleUpdate = async (id: number, data: Partial<ZstuPost>) => {
+  const handleUpdate = async (id: number, data: ZstuPostUpdatePayload) => {
     setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)));
     try {
       await updateZstuPost(id, data);

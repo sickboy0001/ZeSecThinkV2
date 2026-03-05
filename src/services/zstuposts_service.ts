@@ -29,6 +29,12 @@ export interface ZstuPost {
   write_end_at?: Date;
   created_at: Date;
   updated_at: Date;
+  state_detail?: {
+    ai_request?: {
+      status: string;
+      updated_at: Date;
+    };
+  };
 }
 
 export async function getZstuPostsSummary(
@@ -92,6 +98,44 @@ export async function getZstuPostsWithDate(
 
   return result.data as unknown as ZstuPost[];
 }
+
+export async function getZstuPostsWithIds(
+  ids: number[],
+): Promise<ZstuPost[] | null> {
+  const query = `
+    SELECT *
+    FROM zstu_posts
+    WHERE delete_flg = false
+      and id in (${ids.join(", ")})
+    `;
+
+  const result = await executeQuery(query);
+
+  if (!result.success || !Array.isArray(result.data)) {
+    console.error(`Failed to fetch posts for `, result.error);
+    return null;
+  }
+
+  return result.data as unknown as ZstuPost[];
+}
+
+// ステータスの型を定義
+export type AiRequestStatus =
+  | "unprocessed"
+  | "processing"
+  | "pending_requeue"
+  | "refined"
+  | "completed";
+
+export interface AiRequestDetail {
+  status: AiRequestStatus;
+  updated_at: string;
+  is_edited: boolean;
+  is_fixed: boolean;
+  last_refinement_id?: number | null;
+  last_error?: string | null;
+}
+
 // 既存のインポートに追加
 // import { createClient } from "@/utils/supabase/client"; // プロジェクトに合わせて変更してください
 
@@ -102,6 +146,10 @@ export interface UpdateZstuPostParams {
   second?: number;
   public_flg?: boolean;
   delete_flg?: boolean;
+  // state_detailを追加
+  state_detail?: {
+    ai_request: AiRequestDetail;
+  };
 }
 
 export interface CreateZstuPostParams {
@@ -176,6 +224,71 @@ export const deleteZstuPostPhysically = async (id: number) => {
   }
 };
 
+/**
+ * 共通：ai_request オブジェクトを生成するヘルパー（内部用）
+ */
+function createAiRequestDetail(
+  status: AiRequestStatus,
+  overrides?: Partial<AiRequestDetail>,
+): AiRequestDetail {
+  return {
+    status,
+    updated_at: new Date().toISOString(),
+    is_edited: overrides?.is_edited ?? false,
+    is_fixed: overrides?.is_fixed ?? false,
+    last_refinement_id: overrides?.last_refinement_id ?? null,
+    last_error: overrides?.last_error ?? null,
+  };
+}
+
+/**
+ * 1. 未処理状態に戻す (初期化・再バッチ対象)
+ */
+export const updateZstuPostUnprocessed = async (
+  id: number,
+  params: UpdateZstuPostParams = {},
+) => {
+  const state_detail = {
+    ai_request: createAiRequestDetail("unprocessed", {
+      is_edited: false,
+      is_fixed: false,
+    }),
+  };
+  return await updateZstuPost(id, { ...params, state_detail });
+};
+
+/**
+ * 2. 完了状態にする (ユーザー確定時)
+ */
+export const updateZstuPostCompleted = async (
+  id: number,
+  params: UpdateZstuPostParams = {},
+) => {
+  const state_detail = {
+    ai_request: createAiRequestDetail("completed", { is_fixed: true }),
+  };
+  return await updateZstuPost(id, { ...params, state_detail });
+};
+
+/**
+ * 3. 編集済みとして完了状態にする
+ */
+export const updateZstuPostCompletedWithIsEdited = async (
+  id: number,
+  params: UpdateZstuPostParams = {},
+) => {
+  const state_detail = {
+    ai_request: createAiRequestDetail("completed", {
+      is_fixed: true,
+      is_edited: true,
+    }),
+  };
+  return await updateZstuPost(id, { ...params, state_detail });
+};
+
+/**
+ * 基本となる更新関数 (state_detail 対応版)
+ */
 export const updateZstuPost = async (
   id: number,
   params: UpdateZstuPostParams,
@@ -194,6 +307,11 @@ export const updateZstuPost = async (
     updateData.public_flg = params.public_flg;
   if (params.delete_flg !== undefined)
     updateData.delete_flg = params.delete_flg;
+  // JSONBの更新
+  if (params.state_detail !== undefined) {
+    updateData.state_detail = params.state_detail;
+  }
+
   const { error } = await supabase
     .from("zstu_posts")
     .update(updateData)

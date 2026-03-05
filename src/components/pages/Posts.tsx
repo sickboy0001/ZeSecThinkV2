@@ -25,6 +25,7 @@ import {
   ZstuPost,
   deleteZstuPostPhysically,
   updateZstuPost,
+  updateZstuPostUnprocessed,
 } from "@/services/zstuposts_service";
 import { toast } from "sonner";
 import { PostsRegistDialog } from "@/components/molecules/PostsRegistDialog";
@@ -243,7 +244,7 @@ export default function PostsDayView({ userId }: Props) {
 
   const handleTitleSave = async (id: number, newTitle: string) => {
     try {
-      await updateZstuPost(id, { title: newTitle });
+      await updateZstuPostUnprocessed(id, { title: newTitle });
     } catch (error) {
       console.error(error);
       toast.error("更新に失敗しました");
@@ -258,7 +259,7 @@ export default function PostsDayView({ userId }: Props) {
 
   const handleContentSave = async (id: number, newContent: string) => {
     try {
-      await updateZstuPost(id, { content: newContent });
+      await updateZstuPostUnprocessed(id, { content: newContent });
     } catch (error) {
       console.error(error);
       toast.error("更新に失敗しました");
@@ -438,8 +439,44 @@ export default function PostsDayView({ userId }: Props) {
                   />
 
                   <div className="flex flex-col gap-1">
+                    {/* 詳細情報 */}
                     <div className="text-xs text-muted-foreground">
-                      [{post.second}sec] [wr...
+                      [{post.second}sec]{" "}
+                      {post.state_detail?.ai_request?.status ===
+                      "unprocessed" ? (
+                        <span className="text-muted-foreground">AI未処理</span>
+                      ) : post.state_detail?.ai_request?.status ===
+                        "processing" ? (
+                        <span className="text-muted-foreground">AI処理中</span>
+                      ) : post.state_detail?.ai_request?.status ===
+                        "refined" ? (
+                        <span className="text-muted-foreground">
+                          AI処理済み
+                        </span>
+                      ) : post.state_detail?.ai_request?.status ===
+                        "completed" ? (
+                        <span className="text-muted-foreground">処理済み</span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          AIステータス不明
+                        </span>
+                      )}
+                      {post.state_detail?.ai_request?.updated_at && (
+                        <span className="text-muted-foreground">
+                          (更新日時:{" "}
+                          {new Date(
+                            post.state_detail.ai_request.updated_at,
+                          ).toLocaleString("ja-JP", {
+                            timeZone: "Asia/Tokyo",
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          )
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center flex-wrap gap-x-4 gap-y-1">
