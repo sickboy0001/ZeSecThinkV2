@@ -22,23 +22,33 @@ export const AutoResizeTextarea = ({
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
+      // 一旦高さをautoにしてからscrollHeightを取得することで縮む方向のリサイズにも対応
       textarea.style.height = "auto";
-      textarea.style.height = `${textarea.scrollHeight}px`;
+      const borderHeight = textarea.offsetHeight - textarea.clientHeight;
+      // scrollHeightのみで十分な場合もあるので、余分な高さを抑える
+      textarea.style.height = `${textarea.scrollHeight + (borderHeight > 0 ? borderHeight : 0)}px`;
     }
   }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    // onChange時にも即座に高さを反映する
+    textarea.style.height = "auto";
+    const borderHeight = textarea.offsetHeight - textarea.clientHeight;
+    textarea.style.height = `${textarea.scrollHeight + (borderHeight > 0 ? borderHeight : 0)}px`;
+    if (onChange) {
+      onChange(e);
+    }
+  };
 
   return (
     <Textarea
       ref={textareaRef}
       value={value}
-      onChange={(e) => {
-        e.target.style.height = "auto";
-        e.target.style.height = `${e.target.scrollHeight}px`;
-        onChange(e);
-      }}
+      onChange={handleChange}
       onBlur={onBlur}
       className={cn(
-        "focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-colors",
+        "focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-colors resize-none overflow-hidden",
         className,
       )}
       rows={1}

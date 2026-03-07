@@ -27,6 +27,14 @@ export interface AiLogDetail {
   fixed_tags: string | null;
 }
 
+export interface AiLogDetailStatus extends AiLogDetail {
+  current_at: string;
+  created_at: string;
+  updated_at: string;
+  is_edited?: boolean;
+  status?: string;
+}
+
 export interface AiRefinementHistory {
   id: number;
   post_id: number;
@@ -240,6 +248,69 @@ export async function getAiLogDetail(batchid: string): Promise<AiLogDetail[]> {
   return result.rows.map((row) => ({ ...row })) as unknown as AiLogDetail[];
 }
 
+export async function getPostIdsFromAiLogDetail(
+  batchid: string,
+): Promise<number[]> {
+  console.log("Fetching post IDs for batch ID:", batchid);
+  const result = await turso.execute({
+    sql: `
+      SELECT 
+          post_id
+        FROM ai_refinement_history
+      where batch_id = ?
+      order by order_index asc
+    `,
+    args: [batchid],
+  });
+  // Server ActionからClient Componentへ渡すため、プレーンオブジェクトに変換する
+  // console.log("Raw result from Turso:", result);
+  return result.rows.map((row) => Number(row.post_id));
+}
+
+export async function getAiLogDetailFromPostIds(
+  postIds: number[],
+): Promise<AiLogDetail[]> {
+  if (postIds.length === 0) return [];
+
+  // 配列の数だけ "?" を生成する (例: "?, ?, ?")
+  const placeholders = postIds.map(() => "?").join(", ");
+
+  const result = await turso.execute({
+    sql: `
+      SELECT 
+        id, post_id, 
+        batch_id, 
+        order_index, 
+        before_title, 
+        before_text, 
+        before_tags, 
+        after_title, 
+        after_text, 
+        after_tags, 
+        changes_summary, fixed_title, fixed_text, fixed_tags, 
+        created_at
+      FROM (
+        SELECT 
+          ref.*,
+          bat.created_at,
+          -- post_id ごとにグループ化し、作成日時が新しい順に 1, 2, 3... と番号を振る
+          ROW_NUMBER() OVER (
+            PARTITION BY ref.post_id 
+            ORDER BY bat.created_at DESC, ref.id DESC
+          ) as row_num
+        FROM ai_refinement_history ref
+        INNER JOIN ai_batches bat ON bat.id = ref.batch_id
+        WHERE ref.post_id IN (${placeholders})
+      ) t
+      WHERE row_num = 1  -- 各グループの 1番目（最新）だけを抽出
+      ORDER BY post_id ASC;
+
+    `,
+    args: postIds,
+  });
+  // Server ActionからClient Componentへ渡すため、プレーンオブジェクトに変換する
+  return result.rows.map((row) => ({ ...row })) as unknown as AiLogDetail[];
+}
 /**
  * 指定した複数の post_id に対応する修正履歴をすべて取得する
  */
@@ -325,4 +396,36 @@ export async function getAiRefinementHistoryByBatch(batchId: number) {
   });
 
   return result.rows.map((row) => ({ ...row }));
+}
+
+/**
+ * AI修正履歴の修正内容（fixed_title, fixed_text, fixed_tags）を更新する
+ */
+export async function updateAiRefinementHistoryFixedContent(
+  id: number,
+  fixed_title: string,
+  fixed_text: string,
+  fixed_tags: string,
+  is_edited?: boolean,
+) {
+  let sql = `
+    UPDATE ai_refinement_history 
+    SET fixed_title = ?,
+        fixed_text = ?,
+        fixed_tags = ?
+  `;
+  const args: any[] = [fixed_title, fixed_text, fixed_tags];
+
+  if (is_edited !== undefined) {
+    sql += `, is_edited = ?`;
+    args.push(is_edited ? 1 : 0);
+  }
+
+  sql += ` WHERE id = ?`;
+  args.push(id);
+
+  await turso.execute({
+    sql,
+    args,
+  });
 }

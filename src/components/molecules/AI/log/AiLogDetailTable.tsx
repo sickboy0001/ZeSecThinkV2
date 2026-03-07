@@ -1,18 +1,18 @@
 "use client";
 
 import {
-  getAiLogDetail,
-  AiLogDetail as AiLogDetailData,
+  getAiLogDetailFromPostIds,
+  getPostIdsFromAiLogDetail,
+  AiLogDetailStatus,
 } from "@/services/ai_log_service";
 import { getZstuPostsWithIds } from "@/services/zstuposts_service";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import AiLogDetailCard, { AiLogDetailCardRef } from "./AiLogDetailCard";
+import { useRef } from "react";
 
 interface Props {
   batchId: string;
@@ -20,19 +20,23 @@ interface Props {
 
 interface ZstuPost {
   id: number;
-  state_detail?: {
-    ai_request?: {
-      status?: string;
-    };
-  };
+  current_at?: string;
+  updated_at?: string;
+  created_at?: string;
+  state_detail?: any;
 }
 
 export default function AiLogDetailTable({ batchId }: Props) {
-  const [detailData, setDetailData] = useState<AiLogDetailData[] | null>(null);
+  const [detailData, setDetailData] = useState<AiLogDetailStatus[] | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [publicStates, setPublicStates] = useState<Record<string, boolean>>({});
+
+  // 各カードのrefを保持するためのマップ
+  const cardRefs = useRef<Map<string, AiLogDetailCardRef | null>>(new Map());
 
   const toggleSelection = (id: string) => {
     const newSet = new Set(selectedIds);
@@ -60,58 +64,167 @@ export default function AiLogDetailTable({ batchId }: Props) {
     setSelectedIds(new Set());
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // getAiLogDetailから基本データを取得
+  const handlePostSave = async (
+    id: number,
+    title: string,
+    content: string,
+    tag: string,
+  ) => {
+    console.log("Saving post", { id, title, content, tag });
+  };
 
-        const logDetails = await getAiLogDetail(batchId);
-        if (!logDetails) {
-          throw new Error("ログが見つかりません。");
-        }
+  const handleTagDelete = (logId: number, tagToDelete: string) => {
+    setDetailData((prevData) => {
+      if (!prevData) return null;
+      return prevData.map((log) => {
+        if (log.id === logId) {
+          const updatedLog = { ...log };
 
-        // getZstuPostsWithIdsからステータス情報を取得
-        const postIds = logDetails.map((log) => log.post_id);
-        const zstuPosts = (await getZstuPostsWithIds(postIds)) as ZstuPost[];
-        // post_idをキーにしたステータスマップを作成
-        const statusMap = new Map<string, string>();
-        if (zstuPosts) {
-          zstuPosts.forEach((post) => {
-            if (post && post.id) {
-              // state_detail.ai_ai_request.status を取得。存在しない場合は "Unprocess"
-              const status =
-                post.state_detail?.ai_request?.status || "Unprocess";
-              statusMap.set(post.id.toString(), status);
-              // console.log(post);
-              // console.log("status:", post.state_detail);
-            }
-          });
-        }
-
-        // log.statusを新しいステータスで更新
-        const updatedDetailData = logDetails.map((log) => {
-          const newStatus = statusMap.get(log.post_id.toString());
+          // AiLogDetailCardのロジックに合わせて、どのタグを更新するか判断
           // @ts-ignore
-          return newStatus ? { ...log, status: newStatus } : log;
-        });
+          if (log.status === "refined") {
+            const tags =
+              updatedLog.after_tags?.split(",").map((t) => t.trim()) || [];
+            updatedLog.after_tags = tags
+              .filter((t) => t !== tagToDelete)
+              .join(", ");
+          } else {
+            // "completed" やその他の場合
+            const tags =
+              updatedLog.fixed_tags?.split(",").map((t) => t.trim()) || [];
+            updatedLog.fixed_tags = tags
+              .filter((t) => t !== tagToDelete)
+              .join(", ");
+          }
 
-        setDetailData(updatedDetailData);
-        console.log("Updated Detail Data:", updatedDetailData);
-        setSelectedIds(
-          new Set(updatedDetailData.map((log) => log.id.toString())),
-        );
-      } catch (error: any) {
-        const errorMessage = error.message || "AIログ詳細の取得に失敗しました";
-        setError(errorMessage);
-        toast.error(errorMessage);
-      } finally {
-        setLoading(false);
+          toast.info(`タグ "${tagToDelete}" を表示から削除しました。`);
+          return updatedLog;
+        }
+        return log;
+      });
+    });
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const ids = await getPostIdsFromAiLogDetail(batchId);
+      if (!ids) {
+        throw new Error("ログが見つかりません。");
       }
-    };
+      const postIds = ids
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id));
+      const logDetails = await getAiLogDetailFromPostIds(postIds);
+      if (!logDetails) {
+        throw new Error("ログが見つかりません。");
+      }
+      // getZstuPostsWithIdsからステータス情報を取得
+      const zstuPosts = (await getZstuPostsWithIds(postIds)) as ZstuPost[];
+
+      // post_idをキーにしたステータスマップを作成
+      const statusMap = new Map<string, ZstuPost>();
+      if (zstuPosts) {
+        zstuPosts.forEach((post) => {
+          if (post && post.id) {
+            // state_detail.ai_ai_request.status を取得。存在しない場合は "unprocessed"
+            statusMap.set(post.id.toString(), post);
+          }
+        });
+      }
+      console.log("Status Map:", statusMap);
+
+      // log.statusを新しいステータスで更新
+      const updatedDetailData: AiLogDetailStatus[] = logDetails.map((log) => {
+        //logDetailはログ情報ベースリスト
+        //statusMapはポストIDとポスト自体のマップ
+        const post = statusMap.get(log.post_id.toString());
+        console.log(` statusMap.get post:`, post);
+
+        console.log("post.state_detail:", post?.state_detail);
+        let stateDetail = post?.state_detail;
+        if (typeof stateDetail === "string") {
+          try {
+            stateDetail = JSON.parse(stateDetail);
+          } catch (e) {
+            console.error("Failed to parse state_detail", e);
+          }
+        }
+        console.log("State Detail:", stateDetail);
+
+        const newStatus = stateDetail?.ai_request?.status || "unprocessed";
+        console.log(`Determined new status for log ID ${log.id}: ${newStatus}`);
+        const is_edited =
+          stateDetail?.ai_request?.is_edited === true ||
+          stateDetail?.ai_request?.is_edited === "true";
+        console.log(`Post : ${post}`);
+        return {
+          ...log,
+          status: newStatus,
+          current_at: post?.current_at?.toString() || "",
+          created_at: post?.created_at?.toString() || "",
+          updated_at: post?.updated_at?.toString() || "",
+          is_edited: is_edited,
+        };
+      });
+
+      setDetailData(updatedDetailData);
+      console.log("Updated Detail Data:", updatedDetailData);
+      // 再取得時は、選択状態をリセットするか全て選択し直す
+      setSelectedIds(
+        new Set(updatedDetailData.map((log) => log.id.toString())),
+      );
+    } catch (error: any) {
+      const errorMessage = error.message || "AIログ詳細の取得に失敗しました";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [batchId]);
+
+  const handleRegisterAll = async () => {
+    if (!detailData) return;
+
+    // 選択されているカードのみ保存処理を実行する例
+    const selectedLogs = detailData.filter((log) =>
+      selectedIds.has(log.id.toString()),
+    );
+
+    if (selectedLogs.length === 0) {
+      toast.warning("登録する項目が選択されていません");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Promise.allで並列実行して全て確実に処理する
+      const promises = selectedLogs.map((log) => {
+        const ref = cardRefs.current.get(log.id.toString());
+        if (ref) {
+          return ref.saveData();
+        }
+        return Promise.resolve();
+      });
+
+      await Promise.all(promises);
+
+      toast.success(`${selectedLogs.length}件のデータを登録しました`);
+
+      // 登録後にデータを再取得して各コンポーネントを最新化する
+      await fetchData();
+    } catch (e: any) {
+      toast.error(e.message || "登録中にエラーが発生しました");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -155,177 +268,26 @@ export default function AiLogDetailTable({ batchId }: Props) {
         </div>
       </div>
 
-      {detailData.map((log) => {
-        let savedContentTitle = log.fixed_title;
-        let savedContentText = log.fixed_text;
-        let savedContentTags = log.fixed_tags;
-        let savedContentTextVisible = false;
-
-        // @ts-ignore
-        if (log.status === "refined") {
-          savedContentTitle = log.after_title;
-          savedContentText = log.after_text;
-          savedContentTags = log.after_tags;
-          savedContentTextVisible = true;
-          // @ts-ignore
-        } else if (log.status === "completed") {
-          savedContentTextVisible = true;
-        }
-        return (
-          <Card key={log.id} className="overflow-hidden border-muted">
-            <CardContent className="p-0">
-              {/* Row 1: ID & PostID (最小限の高さに調整) */}
-              <div className="bg-muted/30 px-4 py-1.5 border-b flex flex-wrap gap-x-6 gap-y-2 text-[13px] items-center">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id={`select-${log.id}`}
-                    checked={selectedIds.has(log.id.toString())}
-                    onCheckedChange={() => toggleSelection(log.id.toString())}
-                  />
-                  <label
-                    htmlFor={`select-${log.id}`}
-                    className="cursor-pointer text-muted-foreground select-none"
-                  >
-                    登録
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id={`public-${log.id}`}
-                    checked={publicStates[log.id.toString()] ?? true}
-                    onCheckedChange={() => togglePublic(log.id.toString())}
-                  />
-                  <label
-                    htmlFor={`public-${log.id}`}
-                    className="cursor-pointer text-muted-foreground select-none"
-                  >
-                    Public
-                  </label>
-                </div>
-                <div className="flex gap-1.5">
-                  <span className="text-muted-foreground">ID:</span>
-                  <span className="font-bold">{log.id}</span>
-                </div>
-                <div className="flex gap-1.5">
-                  <span className="text-muted-foreground">PostID:</span>
-                  <span className="font-bold">{log.post_id}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* @ts-ignore */}
-                  {log.status === "processing" && (
-                    <div className="text-[11px] font-bold text-blue-600 bg-blue-50/50 w-fit px-1.5 py-0.5 rounded border border-blue-100">
-                      処理中
-                    </div>
-                  )}
-                  {/* @ts-ignore */}
-                  {log.status === "refined" && (
-                    <div className="text-[11px] font-bold text-green-600 bg-green-50/50 w-fit px-1.5 py-0.5 rounded border border-green-100">
-                      受領済(未登録)
-                    </div>
-                  )}
-                  {/* @ts-ignore */}
-                  {log.status === "completed" && (
-                    <div className="text-[11px] font-bold text-purple-600 bg-purple-50/50 w-fit px-1.5 py-0.5 rounded border border-purple-100">
-                      保存済
-                    </div>
-                  )}
-                  {/* @ts-ignore */}
-                  {log.is_edited && (
-                    <div className="text-[11px] font-bold text-orange-600 bg-orange-50/50 w-fit px-1.5 py-0.5 rounded border border-orange-100">
-                      更新済
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Row 2: Before / After / Fixed */}
-              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border-b border-muted/50">
-                {/* 変更前 */}
-                <div className="p-4 space-y-2.5">
-                  <div className="text-[11px] font-bold text-red-600 bg-red-50/50 w-fit px-1.5 py-0.5 rounded border border-red-100">
-                    変更前
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-bold text-sm leading-snug">
-                      {log.before_title}
-                    </p>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {log.before_text}
-                    </p>
-                    <p className="text-[11px] text-blue-600 font-medium">
-                      {log.before_tags}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 変更後 */}
-                <div className="p-4 space-y-2.5">
-                  <div className="text-[11px] font-bold text-green-600 bg-green-50/50 w-fit px-1.5 py-0.5 rounded border border-green-100">
-                    変更後
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-bold text-sm leading-snug">
-                      {log.after_title}
-                    </p>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                      {log.after_text}
-                    </p>
-                    <p className="text-[11px] text-blue-600 font-medium">
-                      {log.after_tags}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 保存内容 */}
-                <div className="p-4 space-y-2.5 bg-slate-50/30">
-                  <div className="text-[11px] font-bold text-blue-700 bg-blue-50/50 w-fit px-1.5 py-0.5 rounded border border-blue-100">
-                    保存内容
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-bold text-sm leading-snug">
-                      {savedContentTitle}
-                    </p>
-                    <p
-                      className={`text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed ${
-                        !savedContentTextVisible
-                          ? "text-transparent select-none"
-                          : ""
-                      }`}
-                    >
-                      {savedContentText ||
-                        (!savedContentTextVisible ? "記録なし" : "")}
-                    </p>
-                    <p className="text-[11px] text-blue-600 font-medium">
-                      {savedContentTags}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 3: Change Summary */}
-              <div className="p-4 bg-orange-50/20">
-                <div className="text-[11px] font-bold text-orange-700/80 uppercase tracking-wider mb-1.5">
-                  変更概要
-                </div>
-                <div className="text-[13px] leading-relaxed text-slate-700">
-                  {log.changes_summary}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {detailData.map((log) => (
+        <AiLogDetailCard
+          key={log.id}
+          ref={(el) => {
+            const currentRefs = cardRefs.current;
+            if (el) {
+              currentRefs.set(log.id.toString(), el);
+            } else {
+              currentRefs.delete(log.id.toString());
+            }
+          }}
+          log={log}
+          isSelected={selectedIds.has(log.id.toString())}
+          isPublic={publicStates[log.id.toString()] ?? true}
+          onToggleSelection={() => toggleSelection(log.id.toString())}
+          onTogglePublic={() => togglePublic(log.id.toString())}
+        />
+      ))}
       <div className="flex justify-end">
-        <Button
-          onClick={() =>
-            console.log("Register", {
-              selectedIds: Array.from(selectedIds),
-              publicStates,
-            })
-          }
-        >
-          登録する
-        </Button>
+        <Button onClick={handleRegisterAll}>登録する</Button>
       </div>
     </div>
   );

@@ -51,6 +51,12 @@ export const dashboardNavItems = [
     adminOnly: false,
   },
   {
+    href: "/AI/log/detailday",
+    icon: Settings,
+    label: "AIログ詳細-a Day List",
+    adminOnly: false,
+  },
+  {
     href: "/admin/ailog",
     icon: FileClock,
     label: "AILog",

@@ -4,6 +4,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { getZstuPostsWithDate, ZstuPost } from "@/services/zstuposts_service";
@@ -138,6 +144,12 @@ const Calender = ({
     return "bg-blue-100 border-blue-200 text-blue-700 hover:bg-blue-200";
   };
 
+  const handleSendAi = (postId: number, title: string) => {
+    console.log(`[AI送信] PostId: ${postId}, Title: ${title}`);
+    toast.info(`AI送信: ${title}`);
+    // 実際のデータ送信処理は不要（現状はログ出力のみ）
+  };
+
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-0">
@@ -188,17 +200,34 @@ const Calender = ({
                 }`}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <span
-                    className={`text-sm font-bold ${
-                      day.getDay() === 0
-                        ? "text-red-500"
-                        : day.getDay() === 6
-                          ? "text-blue-500"
-                          : ""
-                    }`}
-                  >
-                    {day.getDate()}
-                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className={`text-sm font-bold text-left hover:underline focus:outline-none ${
+                          day.getDay() === 0
+                            ? "text-red-500"
+                            : day.getDay() === 6
+                              ? "text-blue-500"
+                              : ""
+                        }`}
+                      >
+                        {day.getDate()}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem
+                        disabled={dayMemos.length === 0}
+                        onClick={() => {
+                          if (dayMemos.length === 0) return;
+                          dayMemos.forEach((memo) =>
+                            handleSendAi(memo.id, memo.title),
+                          );
+                        }}
+                      >
+                        この日の全ポストをAI送信
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   {dayMemos.length > 0 && (
                     <Badge variant="secondary" className="text-[10px] px-1 h-4">
                       {dayMemos.length}
@@ -207,16 +236,25 @@ const Calender = ({
                 </div>
                 <div className="space-y-1">
                   {dayMemos.map((memo) => (
-                    <div
-                      key={memo.id}
-                      className={`text-[11px] leading-tight p-1 rounded border truncate cursor-pointer ${getStatusStyle(
-                        memo.id,
-                      )}`}
-                      title={`${memo.title}\n${memo.content}`}
-                    >
-                      {/* ${memo.id}\n */}
-                      {memo.title}
-                    </div>
+                    <DropdownMenu key={memo.id}>
+                      <DropdownMenuTrigger asChild>
+                        <div
+                          className={`text-[11px] leading-tight p-1 rounded border truncate cursor-pointer hover:opacity-80 transition-opacity ${getStatusStyle(
+                            memo.id,
+                          )}`}
+                          title={`${memo.title}\n${memo.content}`}
+                        >
+                          {memo.title}
+                        </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleSendAi(memo.id, memo.title)}
+                        >
+                          AI送信
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ))}
                 </div>
               </div>

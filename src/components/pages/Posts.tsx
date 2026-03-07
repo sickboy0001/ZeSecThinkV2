@@ -56,10 +56,18 @@ const EditableField = ({
   [key: string]: any;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [initialValue, setInitialValue] = useState("");
+
+  const handleStartEdit = () => {
+    setInitialValue(value);
+    setIsEditing(true);
+  };
 
   const handleBlur = () => {
     setIsEditing(false);
-    onSave(value);
+    if (value !== initialValue) {
+      onSave(value);
+    }
   };
 
   if (isEditing) {
@@ -93,7 +101,7 @@ const EditableField = ({
 
   return (
     <div
-      onClick={() => setIsEditing(true)}
+      onClick={handleStartEdit}
       className={`cursor-pointer min-h-6 ${viewClassName || ""}`}
     >
       {value || (

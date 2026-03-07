@@ -14,7 +14,7 @@ export type SummaryDate = {
 export interface ZstuPost {
   id: number;
   user_id: string;
-  current_at: Date;
+  current_at: string;
   title: string;
   content: string;
   tags: string[];
@@ -25,10 +25,10 @@ export interface ZstuPost {
   public_flg: boolean;
   public_content_flg: boolean;
   delete_flg: boolean;
-  write_start_at?: Date;
-  write_end_at?: Date;
-  created_at: Date;
-  updated_at: Date;
+  write_start_at?: string;
+  write_end_at?: string;
+  created_at: string;
+  updated_at: string;
   state_detail?: {
     ai_request?: {
       status: string;

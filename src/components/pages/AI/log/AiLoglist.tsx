@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { AiLogList, getAiLogList } from "@/services/ai_log_service";
+import { formatDateToJst } from "@/lib/date_util";
 
 interface Props {
   userId: string;
@@ -97,59 +98,7 @@ export default function AiLoglist({ userId }: Props) {
                     }
                     className="cursor-pointer hover:bg-muted/50"
                   >
-                    <TableCell>
-                      {/* 実行日時type1 */}
-                      {/* {new Date(log.created_at).toLocaleString("ja-JP", {
-                        timeZone: "Asia/Tokyo",
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })} */}
-
-                      {/* 実行日時type2 */}
-                      {/* {(() => {
-                        let date = new Date(log.created_at);
-                        // ローカル開発環境で、DBからのUTC日時文字列がタイムゾーンなしで解釈され、
-                        // 9時間ずれる問題への対応。本番環境では 'Z' 付きのISO文字列が返される想定。
-                        if (process.env.NODE_ENV === "development") {
-                          // 誤って解釈された時差9時間分を補正して、正しいUTC時刻に戻す
-                          date = new Date(date.getTime() + 9 * 60 * 60 * 1000);
-                        }
-                        return date.toLocaleString("ja-JP", {
-                          timeZone: "Asia/Tokyo",
-                        });
-                      })()} */}
-                      {/* 実行日時type3 */}
-                      {(() => {
-                        let dateStr = log.created_at;
-
-                        // 1. 文字列がタイムゾーン情報を持っていない（Zや+が含まれていない）場合、
-                        //    ブラウザがローカル時刻と勘違いしないよう 'Z' を付与してUTCとして認識させる
-                        if (
-                          dateStr &&
-                          !dateStr.includes("Z") &&
-                          !dateStr.includes("+")
-                        ) {
-                          // SQLiteの標準的なフォーマット "YYYY-MM-DD HH:mm:ss" を想定
-                          // スペースを T に置き換えて ISO形式に整えるとより安全です
-                          dateStr = dateStr.replace(" ", "T") + "Z";
-                        }
-
-                        const date = new Date(dateStr);
-
-                        // 2. 日本時間 (Asia/Tokyo) に固定して表示
-                        return date.toLocaleString("ja-JP", {
-                          timeZone: "Asia/Tokyo",
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        });
-                      })()}
-                    </TableCell>
+                    <TableCell>{formatDateToJst(log.created_at)}</TableCell>
                     <TableCell>{getStatusBadge(log.status)}</TableCell>
                     <TableCell>
                       {log.completed_chunks} / {log.total_chunks}
