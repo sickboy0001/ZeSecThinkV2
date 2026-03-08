@@ -1,5 +1,4 @@
 "use server";
-
 import AiLogDetailWeek from "@/components/pages/AI/log/AiLogDetailWeek";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";

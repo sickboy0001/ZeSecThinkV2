@@ -117,6 +117,8 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
     const [editedTags, setEditedTags] = useState(savedContentTags || "");
 
     const isCompleted = log.status === "completed";
+    const isUnrequested = !log.after_title;
+    const isDisabled = isCompleted || isUnrequested;
 
     const handleDeleteTag = (tagToDelete: string) => {
       const currentTags = editedTags
@@ -138,13 +140,13 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
             <div className="flex items-center gap-2">
               <Checkbox
                 id={`select-${log.id}`}
-                checked={isCompleted ? false : isSelected}
+                checked={isDisabled ? false : isSelected}
                 onCheckedChange={onToggleSelection}
-                disabled={isCompleted}
+                disabled={isDisabled}
               />
               <label
                 htmlFor={`select-${log.id}`}
-                className={`cursor-pointer select-none ${isCompleted ? "text-muted-foreground/50" : "text-muted-foreground"}`}
+                className={`cursor-pointer select-none ${isDisabled ? "text-muted-foreground/50" : "text-muted-foreground"}`}
               >
                 登録
               </label>
@@ -152,13 +154,13 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
             <div className="flex items-center gap-2">
               <Switch
                 id={`public-${log.id}`}
-                checked={isCompleted ? false : isPublic}
+                checked={isDisabled ? false : isPublic}
                 onCheckedChange={onTogglePublic}
-                disabled={isCompleted}
+                disabled={isDisabled}
               />
               <label
                 htmlFor={`public-${log.id}`}
-                className={`cursor-pointer select-none ${isCompleted ? "text-muted-foreground/50" : "text-muted-foreground"}`}
+                className={`cursor-pointer select-none ${isDisabled ? "text-muted-foreground/50" : "text-muted-foreground"}`}
               >
                 Public
               </label>
@@ -182,6 +184,11 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
             </div>
             {/* 状況バッジ */}
             <div className="flex items-center gap-2">
+              {!log.after_title && (
+                <div className="text-[11px] font-bold text-rose-600 bg-rose-50/50 w-fit px-1.5 py-0.5 rounded border border-rose-100">
+                  未依頼
+                </div>
+              )}
               {log.status === "unprocessed" && (
                 <div className="text-[11px] font-bold text-slate-600 bg-slate-50/50 w-fit px-1.5 py-0.5 rounded border border-slate-100">
                   未処理
@@ -268,15 +275,15 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
             <div className="p-4 space-y-2.5 bg-slate-50/30">
               <div
                 className={`text-[11px] font-bold w-fit px-1.5 py-0.5 rounded border ${
-                  isCompleted
+                  isDisabled
                     ? "text-slate-900 bg-slate-200/70 border-slate-300"
                     : "text-blue-700 bg-blue-50/50 border-blue-100 dark:focus:bg-blue-900/20"
                 }`}
               >
-                保存内容{isCompleted ? "（登録済み）" : ""}
+                保存内容{isDisabled ? "（登録不可）" : ""}
               </div>
               <div className="space-y-2">
-                {isCompleted ? (
+                {isDisabled ? (
                   <>
                     <p className="font-bold text-sm leading-snug">
                       {editedTitle}
@@ -314,13 +321,13 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
                     .map((tag) => (
                       <Badge
                         key={tag}
-                        variant={isCompleted ? "outline" : "secondary"}
+                        variant={isDisabled ? "outline" : "secondary"}
                         className={
-                          isCompleted ? "" : "flex items-center gap-1 pr-1"
+                          isDisabled ? "" : "flex items-center gap-1 pr-1"
                         }
                       >
                         {tag}
-                        {!isCompleted && (
+                        {!isDisabled && (
                           <button
                             onClick={() => handleDeleteTag(tag)}
                             className="rounded-full hover:bg-muted-foreground/20 p-0.5"

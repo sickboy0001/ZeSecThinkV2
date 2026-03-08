@@ -31,7 +31,7 @@ export const NavMenu = ({ userId }: Props) => {
     <div>
       {" "}
       <div className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
           {dashboardNavItems
             .filter((item) => !item.adminOnly || isAdmin)
             .map((item) => (

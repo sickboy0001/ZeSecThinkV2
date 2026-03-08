@@ -83,13 +83,13 @@ export async function getZstuPostsWithDate(
     SELECT *
     FROM zstu_posts
     WHERE user_id = '${userid}'
-      AND delete_flg = false
-      AND current_at::date >= '${startDate}'
-      AND current_at::date <= '${endDate}'
-    ORDER BY current_at DESC,created_at desc
+      AND current_at >= '${startDate}'::date
+      AND current_at < ('${endDate}'::date + INTERVAL '1 day')
+    ORDER BY current_at DESC, created_at DESC
     `;
 
   const result = await executeQuery(query);
+  // console.log(" getZstuPostsWithDate:Query :", query);
 
   if (!result.success || !Array.isArray(result.data)) {
     console.error(`Failed to fetch posts for user ${userid}:`, result.error);

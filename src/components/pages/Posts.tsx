@@ -2,114 +2,29 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Lock,
-  Pencil,
-  Copy,
-  Trash2,
   Plus,
   ChevronLeft,
   ChevronRight,
   SquarePen,
   Loader2,
-  Check,
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
 import {
   getZstuPostsWithDate,
   ZstuPost,
-  deleteZstuPostPhysically,
   updateZstuPost,
   updateZstuPostUnprocessed,
 } from "@/services/zstuposts_service";
 import { toast } from "sonner";
 import { PostsRegistDialog } from "@/components/molecules/PostsRegistDialog";
-import { AutoResizeTextarea } from "@/components/atoms/AutoResizeTextarea";
 import { StepCounter } from "@/components/molecules/StepCounter";
+import { PostCard } from "@/components/molecules/PostCard";
 
 interface Props {
   userId: string;
 }
-
-const EditableField = ({
-  value,
-  onChange,
-  onSave,
-  isTextarea = false,
-  viewClassName,
-  inputClassName,
-  placeholder = "No content",
-  ...props
-}: {
-  value: string;
-  onChange: (val: string) => void;
-  onSave: (val: string) => void;
-  isTextarea?: boolean;
-  viewClassName?: string;
-  inputClassName?: string;
-  placeholder?: string;
-  [key: string]: any;
-}) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [initialValue, setInitialValue] = useState("");
-
-  const handleStartEdit = () => {
-    setInitialValue(value);
-    setIsEditing(true);
-  };
-
-  const handleBlur = () => {
-    setIsEditing(false);
-    if (value !== initialValue) {
-      onSave(value);
-    }
-  };
-
-  if (isEditing) {
-    if (isTextarea) {
-      return (
-        <AutoResizeTextarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={handleBlur}
-          className={inputClassName}
-          autoFocus
-          {...props}
-        />
-      );
-    }
-    return (
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            handleBlur();
-          }
-        }}
-        className={inputClassName}
-        autoFocus
-      />
-    );
-  }
-
-  return (
-    <div
-      onClick={handleStartEdit}
-      className={`cursor-pointer min-h-6 ${viewClassName || ""}`}
-    >
-      {value || (
-        <span className="text-muted-foreground opacity-50">{placeholder}</span>
-      )}
-    </div>
-  );
-};
 
 export default function PostsDayView({ userId }: Props) {
   const router = useRouter();
@@ -204,86 +119,6 @@ export default function PostsDayView({ userId }: Props) {
     return `${y}/${m}/${d}(${w})`;
   };
 
-  const handlePhysicalDelete = async (id: number) => {
-    if (!confirm("本当に完全に削除しますか？この操作は取り消せません。"))
-      return;
-
-    try {
-      await deleteZstuPostPhysically(id);
-      toast.success("完全に削除しました");
-      setRefreshKey((prev) => prev + 1);
-    } catch (error) {
-      console.error(error);
-      toast.error("削除に失敗しました");
-    }
-  };
-
-  const handlePublicChange = async (id: number, checked: boolean) => {
-    try {
-      await updateZstuPost(id, { public_flg: checked });
-      toast.success(`公開設定を${checked ? "オン" : "オフ"}にしました`);
-      setPosts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, public_flg: checked } : p)),
-      );
-    } catch (error) {
-      console.error(error);
-      toast.error("更新に失敗しました");
-    }
-  };
-
-  const handleDeleteChange = async (id: number, checked: boolean) => {
-    try {
-      await updateZstuPost(id, { delete_flg: checked });
-      toast.success(`削除フラグを${checked ? "オン" : "オフ"}にしました`);
-      setPosts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, delete_flg: checked } : p)),
-      );
-    } catch (error) {
-      console.error(error);
-      toast.error("更新に失敗しました");
-    }
-  };
-
-  const handleTitleChange = (id: number, newTitle: string) => {
-    setPosts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, title: newTitle } : p)),
-    );
-  };
-
-  const handleTitleSave = async (id: number, newTitle: string) => {
-    try {
-      await updateZstuPostUnprocessed(id, { title: newTitle });
-    } catch (error) {
-      console.error(error);
-      toast.error("更新に失敗しました");
-    }
-  };
-
-  const handleContentChange = (id: number, newContent: string) => {
-    setPosts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, content: newContent } : p)),
-    );
-  };
-
-  const handleContentSave = async (id: number, newContent: string) => {
-    try {
-      await updateZstuPostUnprocessed(id, { content: newContent });
-    } catch (error) {
-      console.error(error);
-      toast.error("更新に失敗しました");
-    }
-  };
-
-  const handleCopy = async (post: ZstuPost) => {
-    try {
-      await navigator.clipboard.writeText(`${post.title}\n\n${post.content}`);
-      toast.success("クリップボードにコピーしました");
-    } catch (error) {
-      console.error(error);
-      toast.error("コピーに失敗しました");
-    }
-  };
-
   return (
     <div className="w-full max-w-2xl mx-auto p-4 flex flex-col md:gap-4 gap-2">
       {/* --- 画像通りの日付ヘッダー --- */}
@@ -371,168 +206,23 @@ export default function PostsDayView({ userId }: Props) {
           ) : (
             <>
               {posts.map((post, index) => (
-                <div key={post.id} className="flex flex-col gap-1">
-                  <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
-                    {/* タイトル */}
-                    <div className="flex items-center gap-1 min-w-50">
-                      <Lock className="h-4 w-4 text-red-800 shrink-0" />
-                      <EditableField
-                        value={post.title}
-                        onChange={(val) => handleTitleChange(post.id, val)}
-                        onSave={(val) => handleTitleSave(post.id, val)}
-                        viewClassName="text-lg font-bold hover:underline decoration-dashed underline-offset-4"
-                        inputClassName="text-lg! font-bold border-none shadow-none focus-visible:ring-0 px-0 h-auto py-0 bg-transparent focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-colors"
-                        placeholder="タイトルなし"
-                        onKeyDown={(
-                          e: React.KeyboardEvent<HTMLInputElement>,
-                        ) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            e.currentTarget.blur();
-                          }
-                        }}
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-1 ml-auto">
-                      {/* 編集ボタン */}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 border-slate-200"
-                        onClick={() => {
-                          setEditingPost(post);
-                          setIsCreateOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      {/* コピー */}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 border-slate-200"
-                        onClick={() => handleCopy(post)}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* タグ */}
-                  {post.tags && post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {post.tags.map((tag, i) => (
-                        <Badge
-                          key={i}
-                          variant="secondary"
-                          className="text-xs font-normal text-muted-foreground bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700"
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* コンテンツ */}
-
-                  <EditableField
-                    isTextarea
-                    value={post.content}
-                    onChange={(val) => handleContentChange(post.id, val)}
-                    onSave={(val) => handleContentSave(post.id, val)}
-                    viewClassName="text-lg leading-relaxed whitespace-pre-wrap font-normal hover:bg-slate-50/50 rounded p-1 -ml-1 transition-colors"
-                    inputClassName="text-lg leading-relaxed font-normal min-h-[120px] resize-none border-none shadow-none focus-visible:ring-0 px-0 py-0 bg-transparent"
-                    placeholder="内容なし"
-                  />
-
-                  <div className="flex flex-col gap-1">
-                    {/* 詳細情報 */}
-                    <div className="text-xs text-muted-foreground">
-                      [{post.second}sec]{" "}
-                      {post.state_detail?.ai_request?.status ===
-                      "unprocessed" ? (
-                        <span className="text-muted-foreground">AI未処理</span>
-                      ) : post.state_detail?.ai_request?.status ===
-                        "processing" ? (
-                        <span className="text-muted-foreground">AI処理中</span>
-                      ) : post.state_detail?.ai_request?.status ===
-                        "refined" ? (
-                        <span className="text-muted-foreground">
-                          AI処理済み
-                        </span>
-                      ) : post.state_detail?.ai_request?.status ===
-                        "completed" ? (
-                        <span className="text-muted-foreground">処理済み</span>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          AIステータス不明
-                        </span>
-                      )}
-                      {post.state_detail?.ai_request?.updated_at && (
-                        <span className="text-muted-foreground">
-                          (更新日時:{" "}
-                          {new Date(
-                            post.state_detail.ai_request.updated_at,
-                          ).toLocaleString("ja-JP", {
-                            timeZone: "Asia/Tokyo",
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                          )
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center flex-wrap gap-x-4 gap-y-1">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id={`pub-${post.id}`}
-                          checked={post.public_flg}
-                          onCheckedChange={(c) =>
-                            handlePublicChange(post.id, c)
-                          }
-                        />
-                        {/* 公開スイッチ */}
-                        <label htmlFor={`pub-${post.id}`} className="text-sm">
-                          public
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id={`del-${post.id}`}
-                          checked={post.delete_flg}
-                          onCheckedChange={(c) =>
-                            handleDeleteChange(post.id, c)
-                          }
-                        />
-                        {/* 削除スイッチ */}
-
-                        <label htmlFor={`del-${post.id}`} className="text-sm">
-                          delete
-                        </label>
-                      </div>
-                      {/* 物理削除ボタン */}
-                      <Button
-                        variant="outline"
-                        className="h-8 w-8 sm:w-auto text-xs ml-auto border-slate-200 sm:px-3 sm:gap-1"
-                        onClick={() => handlePhysicalDelete(post.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">
-                          Physical deletion
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
-
-                  {index !== posts.length - 1 && (
-                    <Separator className="mt-4 bg-slate-300" />
-                  )}
-                </div>
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  isLast={index === posts.length - 1}
+                  onEdit={(p) => {
+                    setEditingPost(p);
+                    setIsCreateOpen(true);
+                  }}
+                  onDeleted={() => setRefreshKey((prev) => prev + 1)}
+                  onPostUpdated={(updatedPost) => {
+                    setPosts((prev) =>
+                      prev.map((p) =>
+                        p.id === updatedPost.id ? updatedPost : p,
+                      ),
+                    );
+                  }}
+                />
               ))}
             </>
           )}
