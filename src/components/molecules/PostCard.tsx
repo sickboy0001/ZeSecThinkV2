@@ -237,9 +237,9 @@ export const PostCard = ({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
+      <div className="flex items-start gap-x-4 gap-y-2">
         {/* タイトル */}
-        <div className="flex items-center gap-1 min-w-50">
+        <div className="flex items-center gap-1 flex-1 min-w-0">
           {!post.public_flg && (
             <Lock className="h-4 w-4 text-red-800 shrink-0" />
           )}
@@ -259,7 +259,7 @@ export const PostCard = ({
           />
         </div>
 
-        <div className="flex items-center gap-1 ml-auto">
+        <div className="flex items-center gap-1 ml-auto shrink-0">
           {/* 編集ボタン */}
           <Button
             variant="outline"
