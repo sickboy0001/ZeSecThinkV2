@@ -365,8 +365,8 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
         </div>
       </div>
 
-      {/* サマリーテーブル */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      {/* サマリー（デスクトップ: テーブル形式） */}
+      <div className="hidden md:block rounded-xl border bg-card shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
@@ -468,10 +468,83 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
         </Table>
       </div>
 
+      {/* サマリー（モバイル: 3列カード形式） */}
+      <div className="md:hidden grid grid-cols-4 gap-2">
+        {weekRange.days.map((day, index) => {
+          const stats = summaryData.get(day);
+          const isSelected = day === selectedDate;
+          const isToday =
+            day ===
+            new Intl.DateTimeFormat("en-CA", {
+              timeZone: "Asia/Tokyo",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            }).format(new Date());
+
+          return (
+            <div
+              key={day}
+              onClick={() => setSelectedDate(day)}
+              className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                isSelected
+                  ? "ring-2 ring-primary border-primary bg-primary/5"
+                  : "bg-card border-border"
+              } ${isToday ? "border-primary/50" : ""}`}
+            >
+              <div className="flex flex-col items-center mb-2">
+                <span className="text-[10px] text-muted-foreground leading-none">
+                  {day.split("-").slice(1).join("/")}
+                </span>
+                <span
+                  className={`text-xs font-bold ${
+                    index === 0
+                      ? "text-red-500"
+                      : index === 6
+                        ? "text-blue-500"
+                        : ""
+                  } ${isToday ? "underline decoration-2 underline-offset-2" : ""}`}
+                >
+                  {dayNames[index]}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-muted-foreground">計</span>
+                  <span className="text-xs font-bold">{stats?.total || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-yellow-600 font-medium">
+                    AI
+                  </span>
+                  <span className="text-xs font-bold text-yellow-700 bg-yellow-100 px-1 rounded-sm">
+                    {stats?.refined || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-green-600 font-medium">
+                    完
+                  </span>
+                  <span className="text-xs font-bold text-green-700 bg-green-100 px-1 rounded-sm">
+                    {stats?.completed || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-dashed">
+                  <span className="text-[10px] text-muted-foreground">未</span>
+                  <span className="text-[10px] font-medium text-muted-foreground">
+                    {(stats?.processing || 0) + (stats?.unprocessed || 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* 詳細リスト */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-lg font-bold flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+          <h3 className="text-lg font-bold flex items-center flex-wrap gap-2">
             詳細ログ一覧
             <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded border">
               {selectedDate.split("-").slice(1).join("/")}
@@ -486,6 +559,7 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
             </span>
           </h3>
           <Button
+            className="w-full sm:w-auto"
             onClick={handleRegisterAll}
             disabled={
               loading ||
