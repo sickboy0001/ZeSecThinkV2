@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar, MobileNav } from "@/components/layout/navigation";
 import { AppFooter } from "@/components/layout/appFooter";
 import { Toaster } from "@/components/ui/sonner";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,6 +35,7 @@ export default function RootLayout({
         </div>
         <MobileNav />
         <Toaster position="top-center" />
+        <GoogleAnalytics gaId="G-EK2LJ1R7GQ" />
       </body>
     </html>
   );
