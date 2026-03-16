@@ -71,7 +71,7 @@ export async function fetchUserProfile(userId: string) {
     .from("user_profile")
     .select("*")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     throw error;
@@ -95,7 +95,7 @@ export async function fetchUserSubscriptions(userId: string) {
     .from("user_subscriptions")
     .select("*")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     throw error;
@@ -110,7 +110,7 @@ export async function fetchSummaryPreferencesWeek(userId: string) {
     .from("summary_preferences_week")
     .select("*")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     throw error;
@@ -125,7 +125,7 @@ export async function fetchSummaryPreferencesMonthly(userId: string) {
     .from("summary_preferences_monthly")
     .select("*")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     throw error;

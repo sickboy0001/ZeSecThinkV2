@@ -15,7 +15,9 @@ import {
 import { MarkdownRenderer } from "@/components/atoms/MarkdownRenderer";
 
 import { guides_content } from "@/constants/page_constants";
-import { RecentActivityTable } from "@/components/molecules/RecentActivityTable";
+import { RecentActivityTable } from "@/components/molecules/DashBoard/RecentActivityTable";
+import { AiStatusSummaryTable } from "@/components/molecules/DashBoard/AiStatusSummaryTable";
+import { AiStatusRefinedDatesCard } from "@/components/molecules/DashBoard/AiStatusRefinedDatesCard";
 import { cn } from "@/lib/utils";
 import { NavMenu } from "../molecules/DashBoard/NavMenu";
 
@@ -29,7 +31,13 @@ export default function Dashboard({ userId }: Props) {
   useEffect(() => {
     const fetchData = async () => {
       const data = await getZstuPostsSummary(userId);
-      if (data) setSummaryData(data);
+      if (data) {
+        const processedData = data.map((d) => ({
+          ...d,
+          date: d.date instanceof Date ? getJstDateStr(d.date) : String(d.date),
+        }));
+        setSummaryData(processedData as any);
+      }
     };
     fetchData();
   }, [userId]);
@@ -97,6 +105,7 @@ export default function Dashboard({ userId }: Props) {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+      <AiStatusRefinedDatesCard summaryData={summaryData} />
       <NavMenu userId={userId}></NavMenu>
 
       {/* <div>{JSON.stringify(summaryData)}</div> */}
@@ -153,6 +162,9 @@ export default function Dashboard({ userId }: Props) {
           </CardContent>
         </Card>
       </div>
+      {/* 
+      <AiStatusSummaryTable summaryData={summaryData} /> */}
+
       {/* 最近の活動 */}
       <RecentActivityTable summaryData={summaryData} />
     </div>

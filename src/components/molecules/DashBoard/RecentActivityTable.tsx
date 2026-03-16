@@ -71,7 +71,7 @@ export function RecentActivityTable({ summaryData }: Props) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px]">日付</TableHead>
+                <TableHead className="w-30">日付</TableHead>
                 <TableHead className="w-[16%]">投稿数</TableHead>
                 <TableHead className="w-[16%]">思考時間</TableHead>
                 <TableHead className="w-[16%]">文字数</TableHead>
@@ -95,7 +95,7 @@ export function RecentActivityTable({ summaryData }: Props) {
                     : 0;
 
                 return (
-                  <TableRow key={item.date}>
+                  <TableRow key={String(item.date)}>
                     <TableCell
                       className={
                         day === 0
@@ -170,7 +170,7 @@ export function RecentActivityTable({ summaryData }: Props) {
 
             return (
               <div
-                key={item.date}
+                key={String(item.date)}
                 className="flex flex-col gap-3 p-4 border rounded-lg bg-card shadow-sm"
               >
                 <div className="flex items-center justify-between border-b pb-2">

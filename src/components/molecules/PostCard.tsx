@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { getAiStatusLabel } from "@/lib/ai_status";
 import {
   ZstuPost,
   deleteZstuPostPhysically,
@@ -207,11 +208,7 @@ export const PostCard = ({
     const aiStatus = post.state_detail?.ai_request?.status;
     const updatedAt = post.state_detail?.ai_request?.updated_at;
 
-    let statusLabel = "AIステータス不明";
-    if (aiStatus === "unprocessed") statusLabel = "AI未処理";
-    else if (aiStatus === "processing") statusLabel = "AI処理中";
-    else if (aiStatus === "refined") statusLabel = "AI処理済み";
-    else if (aiStatus === "completed") statusLabel = "処理済み";
+    const statusLabel = getAiStatusLabel(aiStatus);
 
     return (
       <div className="text-xs text-muted-foreground">

@@ -5,10 +5,15 @@ import { createClient } from "@/lib/supabase/server";
 import * as AiLogService from "./ai_log_service";
 
 export type SummaryDate = {
-  date: string;
+  date: string | Date;
   post_count: number;
   total_seconds: number;
   total_chars: number;
+  ai_unprocessed: number;
+  ai_processing: number;
+  ai_refined: number;
+  ai_completed: number;
+  ai_pending_requeue: number;
 };
 
 export interface ZstuPost {
@@ -41,12 +46,16 @@ export async function getZstuPostsSummary(
   userid: string,
 ): Promise<SummaryDate[] | null> {
   const query = `
-
   SELECT 
-      date_series.day::date AS date,
+      TO_CHAR(date_series.day, 'YYYY-MM-DD') AS date,
       COUNT(p.id) AS post_count,
       SUM(COALESCE(p.second, 0)) AS total_seconds,
-      SUM(COALESCE(length(p.content), 0)) AS total_chars -- 文字数の合計
+      SUM(COALESCE(length(p.content), 0)) AS total_chars, -- 文字数の合計
+      COUNT(CASE WHEN p.state_detail->'ai_request'->>'status' = 'unprocessed' THEN 1 END) AS ai_unprocessed,
+      COUNT(CASE WHEN p.state_detail->'ai_request'->>'status' = 'processing' THEN 1 END) AS ai_processing,
+      COUNT(CASE WHEN p.state_detail->'ai_request'->>'status' = 'refined' THEN 1 END) AS ai_refined,
+      COUNT(CASE WHEN p.state_detail->'ai_request'->>'status' = 'completed' THEN 1 END) AS ai_completed,
+      COUNT(CASE WHEN p.state_detail->'ai_request'->>'status' = 'pending_requeue' THEN 1 END) AS ai_pending_requeue
   FROM 
       -- 今日から遡って7日間の日付列を生成
       generate_series((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date - INTERVAL '6 days', (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date, '1 day') AS date_series(day)
