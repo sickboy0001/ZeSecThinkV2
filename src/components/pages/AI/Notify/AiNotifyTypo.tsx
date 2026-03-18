@@ -2,6 +2,7 @@
 import AiLogDetailTable from "@/components/molecules/AI/log/AiLogDetailTable";
 import { getAiLogDetail } from "@/services/ai_log_service";
 import { getShortUrlInfo } from "@/services/short_url_service";
+import { formatDateToJst } from "@/lib/date_util";
 import React, { useEffect, useState } from "react";
 
 interface Props {
@@ -32,32 +33,41 @@ export default function AiNotifyTypo({ userId, shortId }: Props) {
   }, [shortId]);
 
   return (
-    <div>
-      <h1>詳細画面</h1>
-      <p>
-        userid: <strong>{userId}</strong>
-      </p>
-      <p>
-        Short ID: <strong>{shortId}</strong>
-      </p>
-      {data && (
-        <div>
-          <h2>取得情報</h2>
-          <ul>
-            {/* <li>UUID: {data.uuid}</li> */}
-            <li>System Name: {data.system_name}</li>
-            <li>Created At: {new Date(data.created_at).toLocaleString()}</li>
-            <li>Batch ID: {data.batch_id}</li>
-          </ul>
-          <details>
-            <summary>Parameters</summary>
-            <pre>{JSON.stringify(data.parameters, null, 2)}</pre>
-          </details>
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold">AI処理の結果が届きました</h1>
+        {data && (
+          <p className="text-muted-foreground">
+            日時：{formatDateToJst(data.created_at)}
+          </p>
+        )}
+      </div>
+
+      <details className="bg-muted/30 p-4 rounded-lg border text-sm">
+        <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground transition-colors">
+          詳細情報 (Short ID: {shortId})
+        </summary>
+        <div className="mt-4 space-y-2">
+          <p>
+            User ID: <strong>{userId}</strong>
+          </p>
+          {data && (
+            <div className="space-y-2">
+              <p>System Name: {data.system_name}</p>
+              <p>Batch ID: {data.batch_id}</p>
+              <div className="pt-2 border-t mt-2">
+                <p className="font-medium mb-1">Parameters:</p>
+                <pre className="bg-background p-2 rounded border overflow-auto max-h-[200px]">
+                  {JSON.stringify(data.parameters, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </details>
+
       {data && data.batch_id && (
-        <div>
-          <h2>AI Log Detail</h2>
+        <div className="pt-4">
           <AiLogDetailTable batchId={data.batch_id} />
         </div>
       )}

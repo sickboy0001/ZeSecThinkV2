@@ -220,11 +220,11 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
         );
         setDetailData(updatedDetailData);
 
-        // 初期選択: 未完了のもの
+        // 初期選択: AI処理済みで未登録のもののみ
         setSelectedIds(
           new Set(
             updatedDetailData
-              .filter((log) => log.status !== "completed")
+              .filter((log) => log.status === "refined")
               .map((log) => log.id.toString()),
           ),
         );
@@ -322,11 +322,11 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="text-center min-w-[200px]">
-            <h2 className="text-lg font-bold">
+            <h2 className="text-xl font-bold">
               {weekRange.start.replace(/-/g, "/")} 〜{" "}
               {weekRange.end.replace(/-/g, "/")}
             </h2>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+            <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider mt-1">
               Weekly AI Log Summary
             </p>
           </div>
@@ -347,7 +347,7 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
               setSelectedIds(
                 new Set(
                   detailData
-                    ?.filter((l) => l.status !== "completed")
+                    ?.filter((l) => l.status === "refined")
                     .map((l) => l.id.toString()),
                 ),
               )
@@ -391,11 +391,11 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
                     } ${isToday ? "text-primary font-bold" : ""}`}
                     onClick={() => setSelectedDate(day)}
                   >
-                    <div className="text-[10px] leading-tight opacity-70">
+                    <div className="text-[11px] leading-tight opacity-70">
                       {day.split("-").slice(1).join("/")}
                     </div>
                     <div
-                      className={`text-sm ${
+                      className={`text-base ${
                         index === 0
                           ? "text-red-500"
                           : index === 6
@@ -430,7 +430,7 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
               </TableCell>
               {weekRange.days.map((day) => (
                 <TableCell key={day} className="text-center">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold bg-yellow-100 text-yellow-800">
                     {summaryData.get(day)?.refined || 0}
                   </span>
                 </TableCell>
@@ -442,14 +442,14 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
               </TableCell>
               {weekRange.days.map((day) => (
                 <TableCell key={day} className="text-center">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-bold bg-green-100 text-green-800">
                     {summaryData.get(day)?.completed || 0}
                   </span>
                 </TableCell>
               ))}
             </TableRow>
             <TableRow className="bg-muted/5">
-              <TableCell className="text-xs text-muted-foreground border-r">
+              <TableCell className="text-sm text-muted-foreground border-r">
                 未処理/中
               </TableCell>
               {weekRange.days.map((day) => {
@@ -457,7 +457,7 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
                 return (
                   <TableCell
                     key={day}
-                    className="text-center text-xs text-muted-foreground"
+                    className="text-center text-sm text-muted-foreground"
                   >
                     {(stats?.processing || 0) + (stats?.unprocessed || 0)}
                   </TableCell>
@@ -493,11 +493,11 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
               } ${isToday ? "border-primary/50" : ""}`}
             >
               <div className="flex flex-col items-center mb-2">
-                <span className="text-[10px] text-muted-foreground leading-none">
+                <span className="text-[11px] text-muted-foreground leading-none">
                   {day.split("-").slice(1).join("/")}
                 </span>
                 <span
-                  className={`text-xs font-bold ${
+                  className={`text-sm font-bold ${
                     index === 0
                       ? "text-red-500"
                       : index === 6
@@ -510,28 +510,28 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
               </div>
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-muted-foreground">計</span>
-                  <span className="text-xs font-bold">{stats?.total || 0}</span>
+                  <span className="text-[11px] text-muted-foreground">計</span>
+                  <span className="text-sm font-bold">{stats?.total || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-yellow-600 font-medium">
+                  <span className="text-[11px] text-yellow-600 font-medium">
                     AI
                   </span>
-                  <span className="text-xs font-bold text-yellow-700 bg-yellow-100 px-1 rounded-sm">
+                  <span className="text-sm font-bold text-yellow-700 bg-yellow-100 px-1 rounded-sm">
                     {stats?.refined || 0}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-green-600 font-medium">
+                  <span className="text-[11px] text-green-600 font-medium">
                     完
                   </span>
-                  <span className="text-xs font-bold text-green-700 bg-green-100 px-1 rounded-sm">
+                  <span className="text-sm font-bold text-green-700 bg-green-100 px-1 rounded-sm">
                     {stats?.completed || 0}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pt-1 border-t border-dashed">
-                  <span className="text-[10px] text-muted-foreground">未</span>
-                  <span className="text-[10px] font-medium text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">未</span>
+                  <span className="text-[11px] font-medium text-muted-foreground">
                     {(stats?.processing || 0) + (stats?.unprocessed || 0)}
                   </span>
                 </div>
@@ -544,12 +544,12 @@ export default function AiLogDetailWeekTable({ userId, initialDate }: Props) {
       {/* 詳細リスト */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
-          <h3 className="text-lg font-bold flex items-center flex-wrap gap-2">
+          <h3 className="text-xl font-bold flex items-center flex-wrap gap-2">
             詳細ログ一覧
-            <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded border">
+            <span className="text-base font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded border">
               {selectedDate.split("-").slice(1).join("/")}
             </span>
-            <span className="text-sm font-normal text-muted-foreground">
+            <span className="text-base font-normal text-muted-foreground">
               (
               {
                 detailData?.filter((log) => log.current_at === selectedDate)

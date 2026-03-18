@@ -136,7 +136,7 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
       <Card key={log.id} className="overflow-hidden border-muted">
         <CardContent className="p-0">
           {/* Row 1: ID & PostID (最小限の高さに調整) */}
-          <div className="bg-muted/30 px-4 py-1.5 border-b flex flex-wrap gap-x-6 gap-y-2 text-[13px] items-center">
+          <div className="bg-muted/30 px-4 py-1.5 border-b flex flex-wrap gap-x-6 gap-y-2 text-sm items-center">
             <div className="flex items-center gap-2">
               <Checkbox
                 id={`select-${log.id}`}
@@ -185,32 +185,32 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
             {/* 状況バッジ */}
             <div className="flex items-center gap-2">
               {!log.after_title && (
-                <div className="text-[11px] font-bold text-rose-600 bg-rose-50/50 w-fit px-1.5 py-0.5 rounded border border-rose-100">
+                <div className="text-xs font-bold text-rose-600 bg-rose-50/50 w-fit px-1.5 py-0.5 rounded border border-rose-100">
                   未依頼
                 </div>
               )}
               {log.status === "unprocessed" && (
-                <div className="text-[11px] font-bold text-slate-600 bg-slate-50/50 w-fit px-1.5 py-0.5 rounded border border-slate-100">
+                <div className="text-xs font-bold text-slate-600 bg-slate-50/50 w-fit px-1.5 py-0.5 rounded border border-slate-100">
                   未処理
                 </div>
               )}
               {log.status === "processing" && (
-                <div className="text-[11px] font-bold text-blue-600 bg-blue-50/50 w-fit px-1.5 py-0.5 rounded border border-blue-100">
+                <div className="text-xs font-bold text-blue-600 bg-blue-50/50 w-fit px-1.5 py-0.5 rounded border border-blue-100">
                   処理中
                 </div>
               )}
               {log.status === "refined" && (
-                <div className="text-[11px] font-bold text-green-600 bg-green-50/50 w-fit px-1.5 py-0.5 rounded border border-green-100">
+                <div className="text-xs font-bold text-green-600 bg-green-50/50 w-fit px-1.5 py-0.5 rounded border border-green-100">
                   受領済(未登録)
                 </div>
               )}
               {log.status === "completed" && (
-                <div className="text-[11px] font-bold text-purple-600 bg-purple-50/50 w-fit px-1.5 py-0.5 rounded border border-purple-100">
+                <div className="text-xs font-bold text-purple-600 bg-purple-50/50 w-fit px-1.5 py-0.5 rounded border border-purple-100">
                   保存済
                 </div>
               )}
               {log.is_edited && (
-                <div className="text-[11px] font-bold text-orange-600 bg-orange-50/50 w-fit px-1.5 py-0.5 rounded border border-orange-100">
+                <div className="text-xs font-bold text-orange-600 bg-orange-50/50 w-fit px-1.5 py-0.5 rounded border border-orange-100">
                   更新済
                 </div>
               )}
@@ -221,14 +221,14 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border-b border-muted/50">
             {/* 変更前 */}
             <div className="p-4 space-y-2.5">
-              <div className="text-[11px] font-bold text-red-600 bg-red-50/50 w-fit px-1.5 py-0.5 rounded border border-red-100">
+              <div className="text-xs font-bold text-red-600 bg-red-50/50 w-fit px-1.5 py-0.5 rounded border border-red-100">
                 変更前
               </div>
               <div className="space-y-2">
-                <p className="font-bold text-sm leading-snug">
+                <p className="font-bold text-base leading-snug">
                   {log.before_title}
                 </p>
-                <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                   {log.before_text}
                 </p>
                 <div className="flex flex-wrap gap-1">
@@ -247,14 +247,14 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
 
             {/* 変更後 */}
             <div className="p-4 space-y-2.5">
-              <div className="text-[11px] font-bold text-green-600 bg-green-50/50 w-fit px-1.5 py-0.5 rounded border border-green-100">
+              <div className="text-xs font-bold text-green-600 bg-green-50/50 w-fit px-1.5 py-0.5 rounded border border-green-100">
                 AI精査後
               </div>
               <div className="space-y-2">
-                <p className="font-bold text-sm leading-snug">
+                <p className="font-bold text-base leading-snug">
                   {log.after_title}
                 </p>
-                <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                   {log.after_text}
                 </p>
                 <div className="flex flex-wrap gap-1">
@@ -274,7 +274,7 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
             {/* 保存内容 */}
             <div className="p-4 space-y-2.5 bg-slate-50/30">
               <div
-                className={`text-[11px] font-bold w-fit px-1.5 py-0.5 rounded border ${
+                className={`text-xs font-bold w-fit px-1.5 py-0.5 rounded border ${
                   isDisabled
                     ? "text-slate-900 bg-slate-200/70 border-slate-300"
                     : "text-blue-700 bg-blue-50/50 border-blue-100 dark:focus:bg-blue-900/20"
@@ -285,10 +285,10 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
               <div className="space-y-2">
                 {isDisabled ? (
                   <>
-                    <p className="font-bold text-sm leading-snug">
+                    <p className="font-bold text-base leading-snug">
                       {editedTitle}
                     </p>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                       {editedContent}
                     </p>
                   </>
@@ -298,13 +298,13 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
                       onBlur={() => {}}
-                      className="font-bold text-sm! shadow-none border-none focus-visible:ring-0 px-0 py-0 min-h-0 bg-transparent focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-colors"
+                      className="font-bold text-base! shadow-none border-none focus-visible:ring-0 px-0 py-0 min-h-0 bg-transparent focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-colors"
                     />
                     <AutoResizeTextarea
                       value={editedContent}
                       onChange={(e) => setEditedContent(e.target.value)}
                       onBlur={() => {}}
-                      className={`font-normal text-xs leading-relaxed  border-none px-0 py-0 bg-white ${
+                      className={`font-normal text-sm leading-relaxed  border-none px-0 py-0 bg-white ${
                         !savedContentTextVisible
                           ? "text-transparent select-none"
                           : ""
@@ -344,10 +344,10 @@ const AiLogDetailCard = forwardRef<AiLogDetailCardRef, Props>(
 
           {/* Row 3: Change Summary */}
           <div className="p-4 bg-orange-50/20">
-            <div className="text-[11px] font-bold text-orange-700/80 uppercase tracking-wider mb-1.5">
+            <div className="text-xs font-bold text-orange-700/80 uppercase tracking-wider mb-1.5">
               変更概要
             </div>
-            <div className="text-[13px] leading-relaxed text-slate-700">
+            <div className="text-sm leading-relaxed text-slate-700">
               {log.changes_summary}
             </div>
           </div>
