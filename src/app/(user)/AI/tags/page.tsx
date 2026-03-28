@@ -1,5 +1,5 @@
 "use server";
-import Tags from "@/components/pages/AI/Tags";
+import AiTypoTagsMnt from "@/components/pages/AI/Typo/AiTypoTagsMnt";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -11,5 +11,5 @@ export default async function Page() {
 
   if (!user) redirect("/login");
 
-  return <Tags userId={user.id} />;
+  return <AiTypoTagsMnt userId={user.id} />;
 }

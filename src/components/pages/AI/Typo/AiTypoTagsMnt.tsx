@@ -17,15 +17,15 @@ import { toast } from "sonner";
 import { Plus, Code, Table as TableIcon } from "lucide-react"; // アイコン追加
 import { DragEndEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import { TagsTable } from "@/components/molecules/TagsTable";
-import { TagsDialog } from "@/components/molecules/TagsDialog";
-import { TagsJson } from "@/components/molecules/TagsJson";
+import { TagsTable } from "@/components/molecules/AI/Typo/TagsTable";
+import { TagsDialog } from "@/components/molecules/AI/Typo/TagsDialog";
+import { TagsJson } from "@/components/molecules/AI/Typo/TagsJson";
 
 interface Props {
   userId: string;
 }
 
-export default function Tags({ userId }: Props) {
+export default function AiTypoTagsMnt({ userId }: Props) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -49,7 +49,6 @@ export default function Tags({ userId }: Props) {
     fetchTags();
   }, [userId]);
 
-  // (handleUpdate, handleDragEnd, handleCreate, handleDelete は変更なしのため中略)
   const handleUpdate = async (id: number, data: Partial<Tag>) => {
     try {
       await updateZstuTag(id, data);
@@ -162,17 +161,15 @@ export default function Tags({ userId }: Props) {
 
         {/* テーブル表示コンテンツ */}
         <TabsContent value="table">
-          <Card>
-            <CardContent className="p-0">
-              <TagsTable
-                tags={tags}
-                loading={loading}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
-                onDragEnd={handleDragEnd}
-              />
-            </CardContent>
-          </Card>
+          <div className="md:border md:rounded-lg md:bg-card">
+            <TagsTable
+              tags={tags}
+              loading={loading}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+              onDragEnd={handleDragEnd}
+            />
+          </div>
         </TabsContent>
 
         {/* JSON表示コンテンツ */}

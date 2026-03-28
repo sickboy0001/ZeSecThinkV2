@@ -27,6 +27,7 @@ import {
   Search,
 } from "lucide-react";
 import { LogEditableCell } from "./LogEditableCell";
+import { LogsWeekCard } from "./LogsWeekCard";
 
 // updateZstuPost関数に渡すことができるフィールドの型を定義します。
 // これにより、互換性のない'state_detail'などのフィールドを含むPartial<ZstuPost>全体を渡すことによる型エラーを防ぎます。
@@ -142,80 +143,112 @@ export function LogsWeek({ userId }: Props) {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <Card>
-          <CardContent className="p-0 overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>日付</TableHead>
-                  <TableHead>タイトル</TableHead>
-                  <TableHead>内容</TableHead>
-                  <TableHead>タグ</TableHead>
-                  <TableHead>公開</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPosts.map((post) => (
-                  <TableRow key={post.id}>
-                    <TableCell className="whitespace-nowrap text-xs">
-                      {new Date(post.current_at!).toLocaleDateString("ja-JP", {
-                        weekday: "short",
-                        day: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell className="min-w-[150px]">
-                      <LogEditableCell
-                        value={post.title}
-                        onSave={(val: string) =>
-                          handleUpdate(post.id, { title: val })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="min-w-[300px]">
-                      <LogEditableCell
-                        value={post.content}
-                        isTextarea
-                        className="whitespace-pre-wrap"
-                        onSave={(val: string) =>
-                          handleUpdate(post.id, { content: val })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {post.tags?.map((tag, i) => (
-                          <span
-                            key={i}
-                            className="px-2 py-0.5 bg-secondary text-[10px] rounded-full"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          handleUpdate(post.id, {
-                            public_flg: !post.public_flg,
-                          })
-                        }
-                      >
-                        {post.public_flg ? (
-                          <Check className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <X className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </TableCell>
+        <>
+          {/* Desktop View: Table */}
+          <Card className="hidden md:block overflow-hidden w-full max-w-full">
+            <CardContent className="p-0 overflow-hidden">
+              <Table className="w-full min-w-[800px] table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap px-2 w-[80px]">
+                      日付
+                    </TableHead>
+                    <TableHead className="min-w-[120px] px-2 w-[150px]">
+                      タイトル
+                    </TableHead>
+                    <TableHead className="min-w-[200px] px-2 w-auto">
+                      内容
+                    </TableHead>
+                    <TableHead className="min-w-[100px] px-2 w-[120px]">
+                      タグ
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center px-2 w-[60px]">
+                      公開
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {filteredPosts.map((post) => (
+                    <TableRow key={post.id}>
+                      <TableCell className="whitespace-nowrap text-xs px-2">
+                        {new Date(post.current_at!).toLocaleDateString(
+                          "ja-JP",
+                          {
+                            weekday: "short",
+                            day: "numeric",
+                          },
+                        )}
+                      </TableCell>
+                      <TableCell className="px-2 truncate">
+                        <LogEditableCell
+                          value={post.title}
+                          onSave={(val: string) =>
+                            handleUpdate(post.id, { title: val })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="px-2">
+                        <LogEditableCell
+                          value={post.content}
+                          isTextarea
+                          className="whitespace-pre-wrap text-sm"
+                          onSave={(val: string) =>
+                            handleUpdate(post.id, { content: val })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="px-2">
+                        <div className="flex flex-wrap gap-1">
+                          {post.tags?.map((tag, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 bg-secondary text-[10px] rounded-full"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-2 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleUpdate(post.id, {
+                              public_flg: !post.public_flg,
+                            })
+                          }
+                        >
+                          {post.public_flg ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <X className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Mobile View: Cards */}
+          <div className="md:hidden space-y-1">
+            {filteredPosts.map((post) => (
+              <LogsWeekCard
+                key={post.id}
+                post={post}
+                handleUpdate={handleUpdate}
+              />
+            ))}
+            {filteredPosts.length === 0 && (
+              <div className="text-center py-10 text-muted-foreground">
+                記録がありません
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

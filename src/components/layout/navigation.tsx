@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
@@ -137,11 +138,17 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden md:flex flex-col w-64 border-r bg-card/50 backdrop-blur-md h-screen sticky top-0 p-4">
+    <aside className="hidden md:flex flex-col w-64 border-r bg-card/50 backdrop-blur-md h-screen sticky top-0 p-4 justify-between">
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-8 px-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold italic">Z</span>
+          <div className="w-8 h-8 relative flex items-center justify-center">
+            <Image
+              src="/images/icon_192x192.png"
+              alt="Logo"
+              width={32}
+              height={32}
+              className="rounded-lg object-contain"
+            />
           </div>
           <div>
             <div className="text-xl font-bold tracking-tight leading-none">
@@ -172,7 +179,7 @@ export function Sidebar() {
                     <div className="flex items-center gap-3">
                       <item.icon
                         className={cn(
-                          "w-5 h-5",
+                          "w-6 h-6",
                           hasActiveChild
                             ? "text-primary"
                             : "group-hover:scale-110 transition-transform",
@@ -202,7 +209,7 @@ export function Sidebar() {
                                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
                             )}
                           >
-                            <child.icon className="w-4 h-4" />
+                            <child.icon className="w-5 h-5" />
                             <span>{child.name}</span>
                             {child.adminOnly && (
                               <UserCog className="w-4 h-4 text-destructive" />
@@ -230,7 +237,7 @@ export function Sidebar() {
               >
                 <item.icon
                   className={cn(
-                    "w-5 h-5",
+                    "w-6 h-6",
                     isActive
                       ? ""
                       : "group-hover:scale-110 transition-transform",
@@ -238,7 +245,7 @@ export function Sidebar() {
                 />
                 <span className="font-medium">{item.name}</span>
                 {item.adminOnly && (
-                  <UserCog className="w-3 h-3 text-destructive" />
+                  <UserCog className="w-4 h-4 text-destructive" />
                 )}
               </Link>
             );
@@ -288,12 +295,12 @@ export function Sidebar() {
         >
           {isLoggedIn ? (
             <>
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-6 w-6" />
               <span>ログアウト</span>
             </>
           ) : (
             <>
-              <LogIn className="h-5 w-5" />
+              <LogIn className="h-6 w-6" />
               <span>ログイン</span>
             </>
           )}
@@ -388,34 +395,34 @@ export function MobileNav() {
   return (
     <div className="md:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
-        <div className="fixed top-4 left-4 z-[100] pointer-events-auto">
+        <div className="fixed bottom-4 left-4 z-[100000]">
           <SheetTrigger asChild>
-            {/* inset-inline-start (left) を明示し、かつ fixed が効くように isolate を追加 */}
             <Button
               size="icon"
               variant="ghost"
               className={cn(
-                /* 3. Button 自体の z-[999] や fixed は親と重複するので整理 */
-                "h-10 w-10 rounded-md border shadow-md transition-all",
-                "bg-background/95 backdrop-blur-md text-foreground",
-                "hover:bg-muted active:scale-95",
+                "h-12 w-12 rounded-md border shadow-md transition-all bg-background/95 backdrop-blur-md text-foreground hover:bg-muted active:scale-95",
               )}
             >
-              <Menu className="h-6 w-6 text-foreground" />
+              <Menu className="h-7 w-7 text-foreground" />
             </Button>
           </SheetTrigger>
         </div>
 
         <SheetContent
           side="left"
-          className="w-[280px] bg-card/95 backdrop-blur-xl border-r flex flex-col h-full"
+          className="w-[280px] bg-card/95 backdrop-blur-xl border-r flex flex-col h-full pt-16 overflow-y-auto"
         >
           <SheetHeader className="text-left mb-6">
             <div className="flex items-center gap-2 px-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold italic">
-                  Z
-                </span>
+              <div className="w-8 h-8 relative flex items-center justify-center">
+                <Image
+                  src="/images/icon_192x192.png"
+                  alt="Logo"
+                  width={32}
+                  height={32}
+                  className="rounded-lg object-contain"
+                />
               </div>
               <div>
                 <SheetTitle className="text-xl font-bold tracking-tight">
@@ -471,7 +478,7 @@ export function MobileNav() {
                         )}
                       >
                         <div className="flex items-center gap-3">
-                          <item.icon className="w-5 h-5" />
+                          <item.icon className="w-6 h-6" />
                           <span className="font-medium">{item.name}</span>
                         </div>
                         {isExpanded ? (
@@ -495,10 +502,10 @@ export function MobileNav() {
                                   : "text-muted-foreground hover:bg-muted",
                               )}
                             >
-                              <child.icon className="w-4 h-4" />
+                              <child.icon className="w-5 h-5" />
                               <span>{child.name}</span>
                               {child.adminOnly && (
-                                <UserCog className="w-3 h-3 text-muted-foreground" />
+                                <UserCog className="w-4 h-4 text-muted-foreground" />
                               )}
                             </Link>
                           ))}
@@ -521,10 +528,10 @@ export function MobileNav() {
                         : "text-muted-foreground hover:bg-muted",
                     )}
                   >
-                    <item.icon className="w-5 h-5" />
+                    <item.icon className="w-6 h-6" />
                     <span className="font-medium">{item.name}</span>
                     {item.adminOnly && (
-                      <UserCog className="w-3 h-3 text-muted-foreground" />
+                      <UserCog className="w-4 h-4 text-muted-foreground" />
                     )}
                   </Link>
                 );
@@ -547,12 +554,12 @@ export function MobileNav() {
             >
               {isLoggedIn ? (
                 <>
-                  <LogOut className="h-5 w-5" />
+                  <LogOut className="h-6 w-6" />
                   <span>ログアウト</span>
                 </>
               ) : (
                 <>
-                  <LogIn className="h-5 w-5" />
+                  <LogIn className="h-6 w-6" />
                   <span>ログイン</span>
                 </>
               )}

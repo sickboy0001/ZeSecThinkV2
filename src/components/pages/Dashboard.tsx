@@ -82,7 +82,7 @@ export default function Dashboard({ userId }: Props) {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-4 animate-in fade-in duration-500 -mt-4">
       <header>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Dashboard</h1>
         <p className="text-muted-foreground">

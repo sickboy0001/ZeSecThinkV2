@@ -120,7 +120,7 @@ export default function PostsDayView({ userId }: Props) {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 flex flex-col md:gap-4 gap-2">
+    <div className="w-full max-w-2xl mx-auto pt-0 flex flex-col md:gap-4 gap-2 -mt-2">
       {/* --- 画像通りの日付ヘッダー --- */}
       <div className="flex items-center justify-between flex-wrap gap-2 px-1">
         <div className="flex items-center gap-3">

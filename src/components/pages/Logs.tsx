@@ -14,11 +14,11 @@ export default function Logs({ userId }: Props) {
   const [viewMode, setViewMode] = useState<"weekly" | "monthly">("weekly");
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 overflow-x-auto">
-      <header className="flex items-center justify-between overflow-x-auto">
+    <div className="space-y-4 w-full max-w-full overflow-hidden -mt-4">
+      <header className="flex items-center justify-between w-full">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Logs</h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground">
             日々の記録を確認・編集します。
           </p>
         </div>
@@ -29,7 +29,7 @@ export default function Logs({ userId }: Props) {
         onValueChange={(v: any) => setViewMode(v)}
         className="w-full"
       >
-        <div className="flex items-center justify-between mb-4 overflow-x-auto">
+        <div className="flex items-center justify-between mb-4">
           <TabsList>
             <TabsTrigger value="weekly" className="gap-2">
               <Calendar className="h-4 w-4" /> 週間
@@ -40,13 +40,11 @@ export default function Logs({ userId }: Props) {
           </TabsList>
         </div>
 
-        <TabsContent value="weekly">
-          <div className="overflow-x-auto">
-            <LogsWeek userId={userId} />
-          </div>
+        <TabsContent value="weekly" className="w-full overflow-hidden">
+          <LogsWeek userId={userId} />
         </TabsContent>
 
-        <TabsContent value="monthly">
+        <TabsContent value="monthly" className="w-full overflow-hidden">
           <LogsMonth userId={userId} />
         </TabsContent>
       </Tabs>

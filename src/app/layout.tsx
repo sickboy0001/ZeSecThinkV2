@@ -21,8 +21,9 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${inter.className} bg-background text-foreground antialiased`}
+        className={`${inter.className} bg-background text-foreground antialiased overflow-x-hidden`}
       >
+        <MobileNav />
         <div className="flex min-h-screen">
           <Sidebar />
           <div className="flex flex-col flex-1">
@@ -33,7 +34,6 @@ export default function RootLayout({
             <AppFooter />
           </div>
         </div>
-        <MobileNav />
         <Toaster position="top-center" />
         <GoogleAnalytics gaId="G-EK2LJ1R7GQ" />
       </body>

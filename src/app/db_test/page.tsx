@@ -1,4 +1,4 @@
-import DbTest from "@/components/pages/Db_test";
+import DbTest from "@/components/pages/Test/Db_test";
 
 export default function Page() {
   return (

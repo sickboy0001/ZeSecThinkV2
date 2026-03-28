@@ -1,4 +1,4 @@
-import DbTursoTest from "@/components/pages/DbTursoTest";
+import DbTursoTest from "@/components/pages/Test/DbTursoTest";
 
 export default function Page() {
   return (

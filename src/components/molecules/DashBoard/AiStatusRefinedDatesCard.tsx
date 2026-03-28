@@ -39,7 +39,7 @@ export function AiStatusRefinedDatesCard({ summaryData }: Props) {
           {refinedDates.map((date) => (
             <Link
               key={String(date.rawDate)}
-              href={`/zst/posts?date=${date.linkDate}`}
+              href={`/AI/log/detailweek?date=${date.linkDate}`}
             >
               <Badge
                 variant="outline"
@@ -54,7 +54,7 @@ export function AiStatusRefinedDatesCard({ summaryData }: Props) {
           ))}
         </div>
         <p className="text-[10px] text-muted-foreground whitespace-nowrap">
-          ※ クリックすると各日付の投稿一覧に移動します。
+          ※ クリックすると各日付のAI実行記録（週次表示）に移動します。
         </p>
       </CardContent>
     </Card>
