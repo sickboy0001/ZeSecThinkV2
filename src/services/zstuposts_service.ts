@@ -96,7 +96,7 @@ export async function getZstuPostsWithDate(
       AND current_at < ('${endDate}'::date + INTERVAL '1 day')
     ORDER BY current_at DESC, created_at DESC
     `;
-
+  console.log(query);
   const result = await executeQuery(query);
   // console.log(" getZstuPostsWithDate:Query :", query);
 

@@ -2,11 +2,21 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrainCircuit, Calendar, Hash, Sparkles, Loader2 } from "lucide-react";
-import { toast } from "sonner"; // またはお使いのtoastライブラリ
+import {
+  BrainCircuit,
+  Calendar,
+  Hash,
+  Sparkles,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner"; // またはお使いの toast ライブラリ
 import { getZstuPostsWithDate, ZstuPost } from "@/services/zstuposts_service";
 import { AnalyticsTagMoment } from "@/components/molecules/Analytics/AnalyticsTagMoment";
 import { AnalyticsTagHeatmap } from "@/components/molecules/Analytics/AnalyticsTagHeatMap";
+import { AnalyticsTagWordCloud } from "@/components/molecules/Analytics/AnalyticsTagWordCloud";
 import {
   Select,
   SelectContent,
@@ -22,14 +32,15 @@ export default function Analytics({ userId }: Props) {
   const [posts, setPosts] = useState<ZstuPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 89)), // 90日間
-    end: new Date(),
+    start: new Date(new Date().setDate(new Date().getDate() - 90)), // 90 日間（昨日起点）
+    end: new Date(new Date().setDate(new Date().getDate() - 1)), // 昨日
   });
   const [rangeValue, setRangeValue] = useState("3m");
 
   const handleRangeChange = (val: string) => {
     setRangeValue(val);
     const end = new Date();
+    end.setDate(end.getDate() - 1); // 昨日をエンドポイントに
     const start = new Date();
 
     switch (val) {
@@ -49,7 +60,35 @@ export default function Analytics({ userId }: Props) {
         start.setFullYear(end.getFullYear() - 1);
         break;
     }
+
     setRange({ start, end });
+  };
+
+  // 期間をシフトする関数
+  const shiftRange = (direction: "prev" | "next") => {
+    const duration = range.end.getTime() - range.start.getTime();
+    const shiftDays = Math.round(duration / (1000 * 60 * 60 * 24));
+
+    if (direction === "prev") {
+      setRange({
+        start: new Date(range.start.getTime() - duration),
+        end: new Date(range.end.getTime() - duration),
+      });
+    } else {
+      // 次の期間（未来には進めない）
+      const newStart = new Date(range.end.getTime());
+      const newEnd = new Date(range.end.getTime() + duration);
+
+      // 未来に進まないようにチェック
+      if (newEnd > new Date()) {
+        return;
+      }
+
+      setRange({
+        start: newStart,
+        end: newEnd,
+      });
+    }
   };
 
   // 1. データ取得ロジック
@@ -62,6 +101,7 @@ export default function Analytics({ userId }: Props) {
       try {
         const formatDate = (d: Date) => d.toISOString().split("T")[0];
         // getZstuPostsWithDate は外部からインポートされている想定
+        console.log(formatDate(range.end), formatDate(range.start));
         const data = await getZstuPostsWithDate(
           userId,
           formatDate(range.start),
@@ -113,18 +153,69 @@ export default function Analytics({ userId }: Props) {
     const sortedTags = Object.entries(tagMap)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+      .slice(0, 10);
+    const sortedTagAlls = Object.entries(tagMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
 
-    // 【重要】時系列順に並べるために weekKeys をソート
-    const momentumData = Object.keys(weeklyTagStats)
-      .sort() // 日付順にソート
-      .map((weekKey) => {
-        const weekData: any = { label: weekKey.substring(5) }; // "MM-DD"
-        sortedTags.forEach((tag) => {
-          weekData[tag.name] = weeklyTagStats[weekKey][tag.name] || 0;
-        });
-        return weekData;
-      });
+    // 【修正】選択された期間 (range) 内の週データのみをフィルタリング
+    // 過去 1 週間の場合は日単位、それ以外は週単位でデータを生成
+    const momentumData =
+      rangeValue === "1w"
+        ? // 日単位データ生成
+          Array.from({ length: 7 }).map((_, i) => {
+            const date = new Date(range.start);
+            date.setDate(date.getDate() + i);
+            // ローカル時間（日本時間）で日付を取得
+            const localDate = new Date(
+              date.getTime() + date.getTimezoneOffset() * 60000,
+            );
+            const dateStr = localDate.toISOString().split("T")[0];
+            const month = (date.getMonth() + 1).toString().padStart(2, "0");
+            const day = date.getDate().toString().padStart(2, "0");
+
+            const dayData: any = {
+              label: `${month}/${day}`,
+            };
+            sortedTags.forEach((tag) => {
+              dayData[tag.name] = tagDateMap[tag.name]?.[dateStr] || 0;
+            });
+            return dayData;
+          })
+        : // 週単位データ生成
+          Object.keys(weeklyTagStats)
+            .sort() // 日付順にソート
+            .filter((weekKey) => {
+              // 週の開始日 (日曜日) を Date オブジェクトに変換
+              const weekStart = new Date(weekKey);
+              // 週の終了日 (土曜日) を算出 (開始日 + 6 日)
+              const weekEnd = new Date(weekStart);
+              weekEnd.setDate(weekStart.getDate() + 6);
+
+              // 週の範囲が選択された期間と重なっているかチェック
+              // 週の終了日が期間の開始日より前、または週の開始日が期間の終了日より後なら除外
+              return !(weekEnd < range.start || weekStart > range.end);
+            })
+            .map((weekKey) => {
+              // 週の開始日と終了日からラベルを生成 (例："02/24 - 03/02")
+              const weekStart = new Date(weekKey);
+              const weekEnd = new Date(weekStart);
+              weekEnd.setDate(weekStart.getDate() + 6);
+
+              const formatWeekLabel = (d: Date) => {
+                const month = (d.getMonth() + 1).toString().padStart(2, "0");
+                const day = d.getDate().toString().padStart(2, "0");
+                return `${month}/${day}`;
+              };
+
+              const weekData: any = {
+                label: `${formatWeekLabel(weekStart)} - ${formatWeekLabel(weekEnd)}`,
+              };
+              sortedTags.forEach((tag) => {
+                weekData[tag.name] = weeklyTagStats[weekKey][tag.name] || 0;
+              });
+              return weekData;
+            });
 
     // 最大値を取得（高さ計算用）
     const maxVal = Math.max(
@@ -136,6 +227,7 @@ export default function Analytics({ userId }: Props) {
 
     return {
       sortedTags,
+      sortedTagAlls,
       dateMap,
       tagDateMap,
       totalCount: posts.length,
@@ -170,8 +262,27 @@ export default function Analytics({ userId }: Props) {
           </h1>
           <p className="text-muted-foreground mt-2 flex items-center gap-2 text-sm">
             <BrainCircuit className="h-4 w-4" />
+            <button
+              onClick={() => shiftRange("prev")}
+              className="p-1.5 hover:bg-primary/20 active:bg-primary/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+              title="前の期間へ"
+            >
+              <ChevronLeft className="h-5 w-5 text-primary" />
+            </button>
             {range.start.toLocaleDateString()} 〜{" "}
             {range.end.toLocaleDateString()} の分析
+            <button
+              onClick={() => shiftRange("next")}
+              className="p-1.5 hover:bg-primary/20 active:bg-primary/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
+              title="次の期間へ"
+              disabled={
+                range.end.getTime() +
+                  (range.end.getTime() - range.start.getTime()) >
+                Date.now()
+              }
+            >
+              <ChevronRight className="h-5 w-5 text-primary" />
+            </button>
             <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-bold">
               Total: {stats?.totalCount || 0} posts
             </span>
@@ -183,16 +294,16 @@ export default function Analytics({ userId }: Props) {
               <SelectValue placeholder="期間を選択" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1w">過去 1週間</SelectItem>
-              <SelectItem value="1m">過去 1ヶ月</SelectItem>
-              <SelectItem value="3m">過去 3ヶ月</SelectItem>
-              <SelectItem value="6m">過去 6ヶ月</SelectItem>
-              <SelectItem value="1y">過去 1年</SelectItem>
+              <SelectItem value="1w">過去 1 週間</SelectItem>
+              <SelectItem value="1m">過去 1 ヶ月</SelectItem>
+              <SelectItem value="3m">過去 3 ヶ月</SelectItem>
+              <SelectItem value="6m">過去 6 ヶ月</SelectItem>
+              <SelectItem value="1y">過去 1 年</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </header>
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         {/* 1. タグ・モメンタム */}
         {/* これがないと、メニューボタンが消える<div className="overflow-x-auto"> */}
         <div className="overflow-x-auto">
@@ -201,43 +312,29 @@ export default function Analytics({ userId }: Props) {
               momentumData={stats.momentumData}
               sortedTags={stats.sortedTags}
               maxVal={stats.maxVal}
+              rangeValue={rangeValue}
             />
           )}
         </div>
 
-        {/* 2. AI インサイト */}
-        <Card className="shadow-md border-primary/20 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-yellow-500" />
-              AI Insights
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <div className="p-3 rounded-lg bg-background/50 border border-primary/10">
-              <p className="font-bold text-primary mb-1">最多活動タグ</p>
-              最も多く記録されたのは{" "}
-              <span className="underline">
-                #{stats?.sortedTags[0]?.name}
-              </span>{" "}
-              です。このテーマに関する思考が深まっています。
-            </div>
-            <div className="p-3 rounded-lg bg-background/50 border border-primary/10">
-              <p className="font-bold text-primary mb-1">集中の兆候</p>
-              1日平均 {((stats?.totalCount || 0) / daysInRange).toFixed(1)}{" "}
-              件のメモ。継続的なアウトプットが維持されています。
-            </div>
-          </CardContent>
-        </Card>
+        {/* 2. タグ・クラウド */}
+        {stats && (
+          <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
+            <AnalyticsTagWordCloud
+              sortedTags={stats.sortedTagAlls}
+              totalCount={stats.totalCount}
+            />
+          </div>
+        )}
       </div>
-      {/* 3. 活動密度ヒートマップ (postsから動的に生成) */}
+      {/* 3. 活動密度ヒートマップ (posts から動的に生成) */}
       {stats && (
         <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
           <AnalyticsTagHeatmap
             range={range}
             items={[
               { label: "思考密度 (全体)", dateMap: stats.dateMap },
-              ...stats.sortedTags.map((tag) => ({
+              ...stats.sortedTags.slice(0, 4).map((tag) => ({
                 label: `#${tag.name}`,
                 dateMap: stats.tagDateMap[tag.name] || {},
               })),
@@ -245,6 +342,7 @@ export default function Analytics({ userId }: Props) {
           />
         </div>
       )}
+
       {/* 4. タグ詳細ランキング */}
       <Card className="shadow-md border-muted/40">
         <CardHeader>
@@ -254,7 +352,7 @@ export default function Analytics({ userId }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {stats?.sortedTags.map((tag) => (
+          {stats?.sortedTags.slice(0, 5).map((tag) => (
             <div key={tag.name}>
               <div className="flex justify-between text-sm mb-1">
                 <span className="font-semibold">#{tag.name}</span>
