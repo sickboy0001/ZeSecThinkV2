@@ -766,6 +766,7 @@ AIのモデルやパラメータは頻繁に変わります。`jsonb` 型で保�
 - [ ] メール送信機能整理　Resend候補かと・・・
   - [x] お名前.comの状況確認
 - [ ] stripe 対応
+- [x] WordCloud もどき対応
 - [x] twtter(x) 対応 -> 保留
 - [x] GoogleAnalysetic 対応　他アプリも、公開するものは対応したほうがいい
 - [x] AIログの登録

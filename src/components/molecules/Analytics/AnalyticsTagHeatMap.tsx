@@ -55,59 +55,90 @@ export function AnalyticsTagHeatmap({ items, range }: Props) {
           </CardTitle>
           <CardDescription>過去{days}日間の日別投稿数</CardDescription>
         </CardHeader>
-        <CardContent
-          className={
-            days === 7
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 px-4 sm:px-6" // gap と px を調整
-              : "grid grid-cols-1 gap-6 px-4 sm:px-6"
-          }
-        >
-          {items.map((item, index) => (
-            <div key={index} className="w-full">
-              <div className="mb-2 text-sm font-medium text-muted-foreground truncate">
-                {item.label}
-              </div>
-              {/* flex-wrap の挙動を安定させ、
-            ドットのサイズをスマホ (w-2.5) と PC(sm:w-3) で微調整
-            */}
-              <div className="flex flex-wrap gap-1 max-w-full">
-                {Array.from({ length: days }).map((_, i) => {
-                  const d = new Date(startUTC);
-                  d.setUTCDate(d.getUTCDate() + i);
-                  const dateStr = d.toISOString().split("T")[0];
-                  const count = item.dateMap[dateStr] || 0;
-                  const isTag = item.label.startsWith("#");
+        <CardContent className="px-4 sm:px-6">
+          {/* スマホでは縦に並べて横スクロール、PC では横に並べる */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:gap-6">
+            {items.map((item, index) => (
+              <div key={index} className="w-full sm:flex-shrink-0 mb-4 sm:mb-0">
+                <div className="mb-2 text-sm font-medium text-muted-foreground truncate">
+                  {item.label}
+                </div>
+                {/* スマホでは横スクロール可能に、PC では固定幅 */}
+                <div
+                  className="overflow-x-auto sm:overflow-visible"
+                  style={{
+                    maxWidth: "100%",
+                  }}
+                >
+                  <div
+                    className="grid"
+                    style={{
+                      gridTemplateRows: "repeat(7, minmax(0, 1fr))",
+                      gridTemplateColumns: `repeat(${Math.ceil(days / 7)}, auto)`,
+                      gap: "0.2rem",
+                      justifyContent: "start",
+                    }}
+                  >
+                    {Array.from({ length: days }).map((_, i) => {
+                      const d = new Date(startUTC);
+                      d.setUTCDate(d.getUTCDate() + i);
+                      const dateStr = d.toISOString().split("T")[0];
+                      const count = item.dateMap[dateStr] || 0;
+                      const isTag = item.label.startsWith("#");
 
-                  let colorClass = "bg-muted";
-                  if (count > 0) {
-                    if (isTag) {
-                      if (count < 2) colorClass = "bg-blue-700/30";
-                      else if (count < 5) colorClass = "bg-blue-500/60";
-                      else colorClass = "bg-blue-400";
-                    } else {
-                      if (count < 2) colorClass = "bg-green-700/30";
-                      else if (count < 5) colorClass = "bg-green-500/60";
-                      else colorClass = "bg-green-400";
-                    }
-                  }
+                      // 曜日の取得（Mon, Tue, Wed, Thu, Fri, Sat, Sun）
+                      const weekdays = [
+                        "Sun",
+                        "Mon",
+                        "Tue",
+                        "Wed",
+                        "Thu",
+                        "Fri",
+                        "Sat",
+                      ];
+                      const weekday = weekdays[d.getUTCDay()];
 
-                  return (
-                    <Tooltip key={i}>
-                      <TooltipTrigger asChild>
-                        <div
-                          // w-3 h-3 から w-2.5 h-2.5 (sm 以上で w-3) に変更
-                          className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-[1px] shrink-0 ${colorClass}`}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{`${dateStr}: ${count} posts`}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
+                      let colorClass = "bg-muted";
+                      if (count > 0) {
+                        if (isTag) {
+                          if (count < 2) colorClass = "bg-blue-700/30";
+                          else if (count < 5) colorClass = "bg-blue-500/60";
+                          else colorClass = "bg-blue-400";
+                        } else {
+                          if (count < 2) colorClass = "bg-green-700/30";
+                          else if (count < 5) colorClass = "bg-green-500/60";
+                          else colorClass = "bg-green-400";
+                        }
+                      }
+
+                      // 縦に 7 行で配置：行 = (i % 7) + 1, 列 = Math.floor(i / 7) + 1
+                      const row = (i % 7) + 1;
+                      const col = Math.floor(i / 7) + 1;
+
+                      return (
+                        <Tooltip key={i}>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={`rounded-[1px] shrink-0 ${colorClass}`}
+                              style={{
+                                gridRow: row,
+                                gridColumn: col,
+                                width: "0.8rem",
+                                height: "0.8rem",
+                              }}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{`${dateStr} (${weekday}): ${count} posts`}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </CardContent>
       </Card>
     </TooltipProvider>
